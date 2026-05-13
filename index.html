@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TaxBuddy Sprint Dashboard</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #22263a;
+    --border: #2e3350;
+    --accent: #6c63ff;
+    --accent2: #00d4aa;
+    --accent3: #ff6b6b;
+    --text: #e2e8f0;
+    --muted: #8892a4;
+    --green: #22c55e;
+    --yellow: #f59e0b;
+    --red: #ef4444;
+    --blue: #3b82f6;
+    --purple: #a855f7;
+    --orange: #f97316;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  /* TOP NAV */
+  .topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 24px; display: flex; align-items: center; justify-content: space-between; height: 56px; position: sticky; top: 0; z-index: 100; }
+  .topbar-left { display: flex; align-items: center; gap: 16px; }
+  .logo { font-size: 18px; font-weight: 700; color: var(--accent); letter-spacing: -0.5px; }
+  .logo span { color: var(--accent2); }
+  .sprint-badge { background: var(--accent); color: #fff; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+  .topbar-right { display: flex; align-items: center; gap: 12px; }
+  .btn { padding: 7px 16px; border-radius: 8px; border: none; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.15s; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: #5a52e0; }
+  .btn-outline { background: transparent; color: var(--text); border: 1px solid var(--border); }
+  .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-danger { background: var(--red); color: #fff; }
+  .btn-danger:hover { background: #dc2626; }
+  .btn-success { background: var(--green); color: #fff; }
+  .btn-success:hover { background: #16a34a; }
+  .btn-sm { padding: 4px 10px; font-size: 12px; }
+
+  /* LAYOUT */
+  .layout { display: flex; height: calc(100vh - 56px); }
+  .sidebar { width: 220px; background: var(--surface); border-right: 1px solid var(--border); padding: 16px 0; flex-shrink: 0; overflow-y: auto; }
+  .main { flex: 1; overflow-y: auto; padding: 24px; }
+
+  /* SIDEBAR */
+  .sidebar-section { padding: 0 12px; margin-bottom: 8px; }
+  .sidebar-label { font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; padding: 6px 8px; }
+  .sidebar-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; cursor: pointer; font-size: 13px; color: var(--muted); transition: all 0.15s; border: none; background: none; width: 100%; text-align: left; }
+  .sidebar-item:hover { background: var(--surface2); color: var(--text); }
+  .sidebar-item.active { background: rgba(108,99,255,0.15); color: var(--accent); }
+  .sidebar-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+  /* STATS BAR */
+  .stats-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 24px; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+  .stat-num { font-size: 28px; font-weight: 700; line-height: 1; margin-bottom: 4px; }
+  .stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .stat-card.accent .stat-num { color: var(--accent); }
+  .stat-card.green .stat-num { color: var(--green); }
+  .stat-card.yellow .stat-num { color: var(--yellow); }
+  .stat-card.red .stat-num { color: var(--red); }
+  .stat-card.blue .stat-num { color: var(--blue); }
+
+  /* FILTERS */
+  .filters { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+  .filter-input { background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 8px 14px; border-radius: 8px; font-size: 13px; width: 220px; }
+  .filter-input:focus { outline: none; border-color: var(--accent); }
+  .filter-select { background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 8px 12px; border-radius: 8px; font-size: 13px; cursor: pointer; }
+  .filter-select:focus { outline: none; border-color: var(--accent); }
+  .filter-chip { padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid transparent; transition: all 0.15s; }
+  .filter-chip.active { border-color: var(--accent); background: rgba(108,99,255,0.15); color: var(--accent); }
+  .filter-chip:not(.active) { border-color: var(--border); color: var(--muted); }
+  .filter-chip:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* SECTION HEADER */
+  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; margin-top: 28px; }
+  .section-header:first-of-type { margin-top: 0; }
+  .section-title { font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+  .section-count { background: var(--surface2); padding: 2px 8px; border-radius: 20px; font-size: 11px; color: var(--muted); }
+
+  /* TASK TABLE */
+  .task-table { width: 100%; border-collapse: collapse; background: var(--surface); border-radius: 12px; overflow: hidden; border: 1px solid var(--border); margin-bottom: 8px; }
+  .task-table th { background: var(--surface2); padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
+  .task-table td { padding: 11px 14px; font-size: 13px; border-top: 1px solid var(--border); vertical-align: middle; }
+  .task-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+  /* STATUS BADGES */
+  .badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+  .badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: 0.8; }
+  .badge-progress { background: rgba(59,130,246,0.15); color: var(--blue); }
+  .badge-planned { background: rgba(168,85,247,0.15); color: var(--purple); }
+  .badge-hold { background: rgba(239,68,68,0.15); color: var(--red); }
+  .badge-done { background: rgba(34,197,94,0.15); color: var(--green); }
+  .badge-approval { background: rgba(245,158,11,0.15); color: var(--yellow); }
+  .badge-started { background: rgba(0,212,170,0.15); color: var(--accent2); }
+  .badge-poc { background: rgba(249,115,22,0.15); color: var(--orange); }
+
+  /* RETRO TOGGLE */
+  .retro-toggle { display: flex; align-items: center; gap: 6px; }
+  .toggle { position: relative; display: inline-block; width: 32px; height: 18px; }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider { position: absolute; cursor: pointer; inset: 0; background: var(--border); border-radius: 18px; transition: 0.2s; }
+  .toggle-slider::before { content: ''; position: absolute; height: 12px; width: 12px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 0.2s; }
+  input:checked + .toggle-slider { background: var(--accent2); }
+  input:checked + .toggle-slider::before { transform: translateX(14px); }
+  .retro-label { font-size: 11px; color: var(--muted); }
+
+  /* RELEASE ESTIMATE */
+  .release-pill { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; background: var(--surface2); border-radius: 6px; font-size: 11px; color: var(--muted); border: 1px solid var(--border); }
+  .release-pill.overdue { border-color: rgba(239,68,68,0.4); color: var(--red); background: rgba(239,68,68,0.08); }
+  .release-pill.soon { border-color: rgba(245,158,11,0.4); color: var(--yellow); background: rgba(245,158,11,0.08); }
+  .release-pill.ok { border-color: rgba(34,197,94,0.4); color: var(--green); background: rgba(34,197,94,0.08); }
+
+  /* OWNER AVATAR */
+  .owner-tag { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--muted); }
+  .avatar { width: 22px; height: 22px; border-radius: 50%; background: var(--accent); font-size: 9px; font-weight: 700; color: #fff; display: inline-flex; align-items: center; justify-content: center; text-transform: uppercase; flex-shrink: 0; }
+
+  /* ROW ACTIONS */
+  .row-actions { display: flex; gap: 4px; opacity: 0; transition: opacity 0.15s; }
+  tr:hover .row-actions { opacity: 1; }
+  .icon-btn { width: 26px; height: 26px; border-radius: 6px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; transition: all 0.15s; }
+  .icon-btn:hover { background: var(--surface2); color: var(--text); }
+  .icon-btn.del:hover { border-color: var(--red); color: var(--red); }
+
+  /* PRIORITY DOT */
+  .priority { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; display: inline-block; }
+  .p-high { background: var(--red); }
+  .p-medium { background: var(--yellow); }
+  .p-low { background: var(--green); }
+
+  /* POINTS */
+  .points-badge { background: var(--surface2); border: 1px solid var(--border); padding: 2px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; color: var(--accent); min-width: 32px; text-align: center; cursor: pointer; }
+  .points-badge:hover { border-color: var(--accent); }
+
+  /* MODAL */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(4px); }
+  .modal-overlay.hidden { display: none; }
+  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; width: 620px; max-width: 100%; max-height: 90vh; overflow-y: auto; }
+  .modal-header { padding: 20px 24px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+  .modal-header h3 { font-size: 16px; font-weight: 700; }
+  .modal-body { padding: 20px 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .modal-footer { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group.full { grid-column: 1 / -1; }
+  label { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  input[type=text], input[type=date], textarea, select.form-select {
+    background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+    padding: 9px 12px; border-radius: 8px; font-size: 13px; font-family: inherit;
+    transition: border-color 0.15s;
+  }
+  input[type=text]:focus, input[type=date]:focus, textarea:focus, select.form-select:focus {
+    outline: none; border-color: var(--accent);
+  }
+  textarea { resize: vertical; min-height: 70px; }
+  .checkbox-row { display: flex; align-items: center; gap: 10px; }
+  .checkbox-row input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--accent2); cursor: pointer; }
+  .checkbox-row label { font-size: 13px; color: var(--text); text-transform: none; letter-spacing: 0; cursor: pointer; }
+
+  /* RETRO PANEL */
+  .retro-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-top: 28px; }
+  .retro-panel h3 { font-size: 15px; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  .retro-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .retro-col { background: var(--surface2); border-radius: 10px; padding: 14px; }
+  .retro-col h4 { font-size: 12px; font-weight: 700; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .retro-col.went-well h4 { color: var(--green); }
+  .retro-col.improve h4 { color: var(--yellow); }
+  .retro-col.action h4 { color: var(--blue); }
+  .retro-item { padding: 8px 10px; background: var(--surface); border-radius: 8px; font-size: 12px; margin-bottom: 8px; border-left: 3px solid var(--border); position: relative; }
+  .retro-col.went-well .retro-item { border-left-color: var(--green); }
+  .retro-col.improve .retro-item { border-left-color: var(--yellow); }
+  .retro-col.action .retro-item { border-left-color: var(--blue); }
+  .retro-add { width: 100%; background: transparent; border: 1px dashed var(--border); color: var(--muted); padding: 8px; border-radius: 8px; cursor: pointer; font-size: 12px; text-align: center; }
+  .retro-add:hover { border-color: var(--accent); color: var(--accent); }
+  .retro-del { position: absolute; right: 6px; top: 6px; background: none; border: none; color: var(--muted); cursor: pointer; font-size: 11px; opacity: 0; }
+  .retro-item:hover .retro-del { opacity: 1; }
+
+  /* VELOCITY CHART */
+  .velocity-section { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-top: 14px; }
+  .velocity-section h3 { font-size: 14px; font-weight: 700; margin-bottom: 16px; color: var(--muted); }
+  .bar-chart { display: flex; align-items: flex-end; gap: 8px; height: 80px; }
+  .bar-wrap { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; }
+  .bar { width: 100%; border-radius: 4px 4px 0 0; min-height: 4px; transition: height 0.3s; }
+  .bar-label { font-size: 10px; color: var(--muted); }
+
+  /* TOAST */
+  .toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 300; display: flex; flex-direction: column; gap: 8px; }
+  .toast { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; font-size: 13px; display: flex; align-items: center; gap: 10px; box-shadow: 0 8px 32px rgba(0,0,0,0.4); animation: slideIn 0.3s ease; min-width: 220px; }
+  .toast.success { border-color: rgba(34,197,94,0.4); }
+  .toast.error { border-color: rgba(239,68,68,0.4); }
+  @keyframes slideIn { from { transform: translateX(100px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+  /* TABS */
+  .tab-row { display: flex; gap: 4px; margin-bottom: 24px; background: var(--surface); border-radius: 10px; padding: 4px; border: 1px solid var(--border); width: fit-content; }
+  .tab { padding: 7px 16px; border-radius: 7px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; background: none; color: var(--muted); transition: all 0.15s; }
+  .tab.active { background: var(--accent); color: #fff; }
+  .tab:not(.active):hover { color: var(--text); }
+
+  /* EMPTY */
+  .empty-state { text-align: center; padding: 40px; color: var(--muted); font-size: 14px; }
+
+  /* SPRINT selector */
+  .sprint-selector { display: flex; align-items: center; gap: 8px; }
+  .sprint-selector select { background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 6px 10px; border-radius: 8px; font-size: 13px; cursor: pointer; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* POINTS INLINE EDIT */
+  .points-input { width: 50px; background: var(--surface2); border: 1px solid var(--accent); color: var(--text); padding: 2px 6px; border-radius: 6px; font-size: 12px; text-align: center; }
+
+  .view-board { display: none; }
+  .view-board.active { display: block; }
+  .view-list { display: none; }
+  .view-list.active { display: block; }
+
+  /* KANBAN */
+  .kanban { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; }
+  .kanban-col { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px; min-height: 200px; }
+  .kanban-col-header { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; }
+  .kanban-card { background: var(--surface2); border-radius: 10px; padding: 12px; margin-bottom: 8px; cursor: pointer; border: 1px solid transparent; transition: all 0.15s; }
+  .kanban-card:hover { border-color: var(--accent); }
+  .kanban-card-title { font-size: 12px; font-weight: 600; margin-bottom: 6px; line-height: 1.4; }
+  .kanban-card-meta { display: flex; justify-content: space-between; align-items: center; }
+  .card-pts { font-size: 10px; background: rgba(108,99,255,0.2); color: var(--accent); padding: 2px 6px; border-radius: 4px; font-weight: 700; }
+
+  /* SECTION owner color strip */
+  .section-strip { height: 3px; border-radius: 2px; margin-bottom: 12px; }
+
+  input[type=number] { background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 9px 12px; border-radius: 8px; font-size: 13px; }
+  input[type=number]:focus { outline: none; border-color: var(--accent); }
+</style>
+</head>
+<body>
+
+<!-- TOP NAV -->
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="logo">TaxBuddy <span>Sprint</span></div>
+    <div class="sprint-selector">
+      <select id="sprintSelect" onchange="changeSprint()">
+        <option value="Apr Sprint 1">Apr Sprint 1</option>
+        <option value="Apr Sprint 2">Apr Sprint 2</option>
+        <option value="May Sprint 1">May Sprint 1</option>
+        <option value="May Sprint 2">May Sprint 2</option>
+        <option value="Jun Sprint 1">Jun Sprint 1</option>
+        <option value="Jun Sprint 2">Jun Sprint 2</option>
+      </select>
+    </div>
+    <div class="sprint-badge" id="sprintBadge">Apr Sprint 1</div>
+  </div>
+  <div class="topbar-right">
+    <button class="btn btn-outline" onclick="exportCSV()">⬇ Export CSV</button>
+    <button class="btn btn-primary" onclick="openAddModal()">+ Add Task</button>
+  </div>
+</div>
+
+<div class="layout">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Views</div>
+      <button class="sidebar-item active" onclick="switchView('list', this)">
+        <span>☰</span> List View
+      </button>
+      <button class="sidebar-item" onclick="switchView('board', this)">
+        <span>⊞</span> Board View
+      </button>
+      <button class="sidebar-item" onclick="switchView('retro', this)">
+        <span>🔄</span> Retro Board
+      </button>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Sections</div>
+      <button class="sidebar-item" onclick="scrollToSection('AI-Powered')">
+        <span class="sidebar-dot" style="background:#6c63ff"></span> AI & Journeys
+      </button>
+      <button class="sidebar-item" onclick="scrollToSection('ChatBuddy')">
+        <span class="sidebar-dot" style="background:#00d4aa"></span> ChatBuddy
+      </button>
+      <button class="sidebar-item" onclick="scrollToSection('Partner')">
+        <span class="sidebar-dot" style="background:#f97316"></span> Partners
+      </button>
+      <button class="sidebar-item" onclick="scrollToSection('Utility')">
+        <span class="sidebar-dot" style="background:#3b82f6"></span> Utility & BO
+      </button>
+      <button class="sidebar-item" onclick="scrollToSection('Parser')">
+        <span class="sidebar-dot" style="background:#a855f7"></span> Parsers
+      </button>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Owners</div>
+      <button class="sidebar-item" onclick="filterOwner('Gitanjali')">
+        <div class="avatar" style="background:#6c63ff">G</div> Gitanjali
+      </button>
+      <button class="sidebar-item" onclick="filterOwner('Pratik')">
+        <div class="avatar" style="background:#f97316">P</div> Pratik
+      </button>
+      <button class="sidebar-item" onclick="filterOwner('Tushar')">
+        <div class="avatar" style="background:#a855f7">T</div> Tushar
+      </button>
+      <button class="sidebar-item" onclick="filterOwner('all')">
+        <span style="font-size:14px">👥</span> All Owners
+      </button>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main" id="mainContent">
+
+    <!-- STATS -->
+    <div class="stats-row" id="statsRow"></div>
+
+    <!-- TABS -->
+    <div class="tab-row">
+      <button class="tab active" onclick="switchTab('all', this)">All Tasks</button>
+      <button class="tab" onclick="switchTab('sprint', this)">This Sprint</button>
+      <button class="tab" onclick="switchTab('retro-tasks', this)">In Retro</button>
+      <button class="tab" onclick="switchTab('blocked', this)">Blocked</button>
+    </div>
+
+    <!-- FILTERS -->
+    <div class="filters">
+      <input class="filter-input" type="text" id="searchInput" placeholder="🔍  Search tasks..." oninput="renderAll()">
+      <select class="filter-select" id="statusFilter" onchange="renderAll()">
+        <option value="">All Statuses</option>
+        <option value="In progress">In Progress</option>
+        <option value="Planned">Planned</option>
+        <option value="On hold">On Hold</option>
+        <option value="Done">Done</option>
+        <option value="Awaiting approval">Awaiting Approval</option>
+        <option value="POC in progress">POC</option>
+        <option value="Started">Started</option>
+      </select>
+      <select class="filter-select" id="priorityFilter" onchange="renderAll()">
+        <option value="">All Priorities</option>
+        <option value="High">High</option>
+        <option value="Medium">Medium</option>
+        <option value="Low">Low</option>
+      </select>
+      <div class="filter-chip active" id="chip-all" onclick="filterChip('all')">All</div>
+      <div class="filter-chip" id="chip-retro" onclick="filterChip('retro')">🔄 Retro</div>
+      <div class="filter-chip" id="chip-sprint" onclick="filterChip('sprint')">⚡ Sprint</div>
+    </div>
+
+    <!-- LIST VIEW -->
+    <div id="view-list" class="view-list active"></div>
+
+    <!-- BOARD VIEW -->
+    <div id="view-board" class="view-board">
+      <div class="kanban" id="kanbanBoard"></div>
+    </div>
+
+    <!-- RETRO VIEW -->
+    <div id="view-retro" class="view-board">
+      <div class="retro-panel">
+        <h3>🔄 Sprint Retrospective — <span id="retroSprintLabel"></span></h3>
+        <div class="retro-grid">
+          <div class="retro-col went-well">
+            <h4>✅ Went Well</h4>
+            <div id="retro-well"></div>
+            <button class="retro-add" onclick="addRetroItem('well')">+ Add item</button>
+          </div>
+          <div class="retro-col improve">
+            <h4>⚠️ Needs Improvement</h4>
+            <div id="retro-improve"></div>
+            <button class="retro-add" onclick="addRetroItem('improve')">+ Add item</button>
+          </div>
+          <div class="retro-col action">
+            <h4>🎯 Action Items</h4>
+            <div id="retro-action"></div>
+            <button class="retro-add" onclick="addRetroItem('action')">+ Add item</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tasks flagged for retro -->
+      <div style="margin-top:20px">
+        <div class="section-header">
+          <div class="section-title">Tasks Flagged for Retro</div>
+        </div>
+        <div id="retro-tasks-list"></div>
+      </div>
+
+      <!-- Velocity -->
+      <div class="velocity-section">
+        <h3>📈 Sprint Velocity (Story Points)</h3>
+        <div class="bar-chart" id="velocityChart"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ADD/EDIT MODAL -->
+<div class="modal-overlay hidden" id="taskModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalTitle">Add New Task</h3>
+      <button class="btn btn-outline btn-sm" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group full">
+        <label>Task Name</label>
+        <input type="text" id="f-name" placeholder="e.g. AI Follow-up Automation">
+      </div>
+      <div class="form-group full">
+        <label>Goal / Description</label>
+        <textarea id="f-goal" placeholder="What does this task achieve?"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Section</label>
+        <select class="form-select" id="f-section">
+          <option>AI-Powered</option>
+          <option>ChatBuddy</option>
+          <option>Partner</option>
+          <option>Utility</option>
+          <option>Parser</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <select class="form-select" id="f-status">
+          <option>Planned</option>
+          <option>In progress</option>
+          <option>POC in progress</option>
+          <option>Awaiting approval</option>
+          <option>Started</option>
+          <option>On hold</option>
+          <option>Done</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Owner(s)</label>
+        <input type="text" id="f-owner" placeholder="e.g. Gitanjali, Pratik">
+      </div>
+      <div class="form-group">
+        <label>Priority</label>
+        <select class="form-select" id="f-priority">
+          <option>High</option>
+          <option selected>Medium</option>
+          <option>Low</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Story Points</label>
+        <input type="number" id="f-points" min="1" max="13" value="3" placeholder="1–13">
+      </div>
+      <div class="form-group">
+        <label>Estimated Release</label>
+        <input type="date" id="f-release">
+      </div>
+      <div class="form-group">
+        <label>Sprint</label>
+        <select class="form-select" id="f-sprint">
+          <option>Apr Sprint 1</option>
+          <option>Apr Sprint 2</option>
+          <option>May Sprint 1</option>
+          <option>May Sprint 2</option>
+          <option>Jun Sprint 1</option>
+          <option>Jun Sprint 2</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Notes / Risks</label>
+        <input type="text" id="f-notes" placeholder="Any blockers or risks?">
+      </div>
+      <div class="form-group full">
+        <div class="checkbox-row">
+          <input type="checkbox" id="f-retro">
+          <label for="f-retro">Include in Retrospective</label>
+        </div>
+      </div>
+      <div class="form-group full">
+        <div class="checkbox-row">
+          <input type="checkbox" id="f-sprint-flag">
+          <label for="f-sprint-flag">Add to Current Sprint</label>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveTask()">Save Task</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+// ─────────────────────────────────────────────
+// DATA SEED
+// ─────────────────────────────────────────────
+const SEED_TASKS = [
+  // AI-Powered
+  { id:'t1', name:'AI Follow-ups', section:'AI-Powered', goal:'Auto send timely follow-up messages/reminders based on inactivity, pending actions, or unresolved queries.', owner:'Divya, Mandar', status:'In progress', priority:'High', points:8, release:'', sprint:'Apr Sprint 1', notes:'Timeline not finalized', retro:false, sprintFlag:true },
+  { id:'t2', name:'NRI in Automation', section:'AI-Powered', goal:'Extend automation to NRI cases.', owner:'Gitanjali', status:'Planned', priority:'Medium', points:5, release:'2026-04-30', sprint:'Apr Sprint 2', notes:'', retro:false, sprintFlag:false },
+  { id:'t3', name:'Revised ITR Automation', section:'AI-Powered', goal:'Enhance based on season learnings, generate a compliant revised ITR with minimal user input.', owner:'Gitanjali', status:'Planned', priority:'High', points:8, release:'2026-04-30', sprint:'Apr Sprint 2', notes:'', retro:false, sprintFlag:false },
+  { id:'t4', name:'DIY Conversational & Smart Edit Flow', section:'AI-Powered', goal:'Post-summary correction — conversational filing till 1st summary.', owner:'Tushar, Vishal', status:'Awaiting approval', priority:'High', points:13, release:'2026-04-15', sprint:'Apr Sprint 1', notes:'Flutter web know-how required', retro:true, sprintFlag:true },
+  { id:'t5', name:'AI in Calling Channel', section:'AI-Powered', goal:'AI-driven calling & transcripts.', owner:'Tushar, Ashwini, Ankita', status:'POC in progress', priority:'Medium', points:8, release:'2026-05-15', sprint:'May Sprint 1', notes:'Inbound testing pending', retro:false, sprintFlag:false },
+  { id:'t6', name:'Automation in Email', section:'AI-Powered', goal:'Email automation for user communication.', owner:'Nehal, Gitanjali', status:'On hold', priority:'Low', points:3, release:'', sprint:'', notes:'', retro:false, sprintFlag:false },
+  { id:'t7', name:'WebEngage Automation', section:'AI-Powered', goal:'WebEngage campaign setup and automation.', owner:'Pratik, Rishi, Divya', status:'On hold', priority:'Low', points:2, release:'2026-08-01', sprint:'', notes:'On hold till Aug', retro:false, sprintFlag:false },
+  { id:'t8', name:'User Facing Revamp (Web & Mobile)', section:'AI-Powered', goal:'Revamp user-facing UI for web and mobile platforms.', owner:'Pratik', status:'Planned', priority:'High', points:13, release:'2026-06-30', sprint:'Jun Sprint 1', notes:'', retro:false, sprintFlag:false },
+  { id:'t9', name:'Conversation Summary', section:'AI-Powered', goal:'Generate and display conversation summaries for users.', owner:'Gitanjali', status:'Planned', priority:'Medium', points:5, release:'2026-05-31', sprint:'May Sprint 2', notes:'', retro:false, sprintFlag:false },
+  // ChatBuddy
+  { id:'t10', name:'Chat Escalation', section:'ChatBuddy', goal:'Auto-route complex/unresolved queries from bot to expert. Reduces manual triage via rules/triggers.', owner:'Gitanjali, Chandrashekhar, Nehal, Kamaru', status:'In progress', priority:'High', points:8, release:'2026-04-30', sprint:'Apr Sprint 1', notes:'Sentiment accuracy concern', retro:true, sprintFlag:true },
+  { id:'t11', name:'Support Email Tags', section:'ChatBuddy', goal:'Categorize incoming support emails using predefined tags based on issue type, priority, or product area.', owner:'Gitanjali', status:'Planned', priority:'Medium', points:3, release:'2026-05-15', sprint:'May Sprint 1', notes:'', retro:false, sprintFlag:false },
+  // Partner
+  { id:'t12', name:'Partner Dashboard Enhancement', section:'Partner', goal:'Enhancement in partner dashboard — Reconciliation, GST & Other services, Bank Non-SSO, PD/WB, Funnel/Analytics.', owner:'Pratik', status:'In progress', priority:'High', points:8, release:'2026-05-30', sprint:'May Sprint 1', notes:'', retro:false, sprintFlag:false },
+  { id:'t13', name:'Partner Payout Automation', section:'Partner', goal:'Automate payout calculation as per partner, aligned with Partner Dashboard.', owner:'Pratik', status:'Planned', priority:'High', points:5, release:'2026-05-30', sprint:'May Sprint 2', notes:'', retro:false, sprintFlag:false },
+  { id:'t14', name:'Bandhan Integration', section:'Partner', goal:'Integrate Bandhan Bank as a partner.', owner:'Pratik', status:'Planned', priority:'Medium', points:3, release:'', sprint:'Apr Sprint 2', notes:'', retro:false, sprintFlag:false },
+  { id:'t15', name:'PhonePe Integration', section:'Partner', goal:'Integrate PhonePe as a partner channel.', owner:'Pratik', status:'Planned', priority:'High', points:5, release:'', sprint:'Apr Sprint 2', notes:'', retro:false, sprintFlag:false },
+  { id:'t16', name:'Zomato Integration', section:'Partner', goal:'Integrate Zomato as a partner channel.', owner:'Gitanjali', status:'Planned', priority:'Medium', points:3, release:'', sprint:'May Sprint 1', notes:'', retro:false, sprintFlag:false },
+  { id:'t17', name:'Centrum Thematic Basket', section:'Partner', goal:'Thematic basket integration with Centrum.', owner:'Pratik', status:'Started', priority:'High', points:5, release:'2026-04-30', sprint:'Apr Sprint 1', notes:'', retro:false, sprintFlag:true },
+  { id:'t18', name:'Wealth AI', section:'Partner', goal:'AI-driven wealth management feature for partners.', owner:'Pratik', status:'Planned', priority:'Medium', points:8, release:'2026-06-30', sprint:'Jun Sprint 1', notes:'', retro:false, sprintFlag:false },
+  { id:'t19', name:'NRI Filings — Pravasi/Aspora', section:'Partner', goal:'Enable NRI filings via Pravasi/Aspora partnership.', owner:'Pratik', status:'On hold', priority:'Low', points:5, release:'', sprint:'', notes:'TBD', retro:false, sprintFlag:false },
+  { id:'t20', name:'Mintoak GST Integration', section:'Partner', goal:'GST post-ITR integration with Mintoak.', owner:'Tushar, Divya, Ashwini', status:'On hold', priority:'Low', points:5, release:'', sprint:'', notes:'TBD', retro:false, sprintFlag:false },
+  // Utility
+  { id:'t21', name:'In-house Tax Payment Option', section:'Utility', goal:'Enable users to calculate and pay income tax directly on platform with auto challan generation and ITR linkage.', owner:'Gitanjali', status:'Planned', priority:'High', points:8, release:'2026-04-30', sprint:'Apr Sprint 2', notes:'', retro:false, sprintFlag:false },
+  { id:'t22', name:'Utility UI/UX Revamp', section:'Utility', goal:'Improve summaries and regime selection UI.', owner:'Product & Design', status:'On hold', priority:'Medium', points:5, release:'', sprint:'', notes:'Scope pending', retro:false, sprintFlag:false },
+  { id:'t23', name:'Payout — List Price to Payment Received', section:'Utility', goal:'Track and reconcile payout from list price to actual payment received.', owner:'Gitanjali', status:'Planned', priority:'Medium', points:3, release:'2026-05-31', sprint:'May Sprint 2', notes:'', retro:false, sprintFlag:false },
+  { id:'t24', name:'Partner App', section:'Utility', goal:'Build or enhance the partner-facing mobile/web application.', owner:'Tushar, Poonam', status:'In progress', priority:'High', points:8, release:'2026-05-31', sprint:'May Sprint 1', notes:'', retro:false, sprintFlag:false },
+  // Parser
+  { id:'t25', name:'Capital Gain Parser – Phase 2', section:'Parser', goal:'Expand CG statement parsing for Equity, MF, F&O with standardized FY validation, expense handling and UI improvements.', owner:'Tushar, Chandrashekhar', status:'In progress', priority:'High', points:13, release:'2026-04-28', sprint:'Apr Sprint 1', notes:'', retro:true, sprintFlag:true },
+  { id:'t26', name:'CG Partner Integration (Dhan, Zerodha)', section:'Parser', goal:'Direct broker integration to fetch Capital Gain data via user login.', owner:'Tushar', status:'In progress', priority:'High', points:8, release:'2026-05-15', sprint:'May Sprint 1', notes:'', retro:false, sprintFlag:false },
+  { id:'t27', name:'Home Loan Certificate Parser', section:'Parser', goal:'Automated parsing of Home Loan Interest & Principal certificates for tax computation.', owner:'Tushar', status:'Planned', priority:'High', points:5, release:'2026-04-28', sprint:'Apr Sprint 2', notes:'', retro:false, sprintFlag:false },
+  { id:'t28', name:'FA Parser (Foreign Assets)', section:'Parser', goal:'DIY flow for Foreign Assets: user fills template, data auto-parsed into filing flow.', owner:'Tushar', status:'Planned', priority:'Medium', points:5, release:'', sprint:'May Sprint 2', notes:'Timeline TBD', retro:false, sprintFlag:false },
+  { id:'t29', name:'AL Parser (Assets & Liabilities)', section:'Parser', goal:'DIY flow for A&L when income > ₹1 Cr. Template-based parsing into filing flow.', owner:'Tushar', status:'Planned', priority:'Medium', points:5, release:'', sprint:'Jun Sprint 1', notes:'Timeline TBD', retro:false, sprintFlag:false },
+  { id:'t30', name:'RSU Parser', section:'Parser', goal:'Parse RSU statements for vesting, FMV, sale, and tax-relevant data for filing.', owner:'Tushar', status:'On hold', priority:'Low', points:5, release:'', sprint:'', notes:'Post Phase 2 stability', retro:false, sprintFlag:false },
+];
+
+const SECTION_META = {
+  'AI-Powered': { color:'#6c63ff', label:'AI & Conversational Journeys', owner:'Gitanjali' },
+  'ChatBuddy':  { color:'#00d4aa', label:'ChatBuddy Enhancements',       owner:'Gitanjali' },
+  'Partner':    { color:'#f97316', label:'Partner Integrations',          owner:'Pratik / Gitanjali' },
+  'Utility':    { color:'#3b82f6', label:'Utility & Back Office',         owner:'Gitanjali' },
+  'Parser':     { color:'#a855f7', label:'Product Parser Roadmap',        owner:'Tushar' },
+};
+
+// ─────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────
+let tasks = [], retro = { well:[], improve:[], action:[] };
+let activeView = 'list', activeTab = 'all', activeChip = 'all', ownerFilter = 'all';
+let editingId = null, currentSprint = 'Apr Sprint 1';
+
+function load() {
+  const saved = localStorage.getItem('tb_tasks');
+  tasks = saved ? JSON.parse(saved) : JSON.parse(JSON.stringify(SEED_TASKS));
+  const savedRetro = localStorage.getItem('tb_retro');
+  retro = savedRetro ? JSON.parse(savedRetro) : { well:[], improve:[], action:[] };
+  currentSprint = localStorage.getItem('tb_sprint') || 'Apr Sprint 1';
+  document.getElementById('sprintSelect').value = currentSprint;
+  document.getElementById('sprintBadge').textContent = currentSprint;
+}
+function save() { localStorage.setItem('tb_tasks', JSON.stringify(tasks)); }
+function saveRetro() { localStorage.setItem('tb_retro', JSON.stringify(retro)); }
+
+// ─────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────
+function uid() { return 't' + Date.now() + Math.random().toString(36).slice(2,6); }
+
+function statusBadge(s) {
+  const map = {
+    'In progress':'badge-progress','Planned':'badge-planned','On hold':'badge-hold',
+    'Done':'badge-done','Awaiting approval':'badge-approval','Started':'badge-started',
+    'POC in progress':'badge-poc'
+  };
+  return `<span class="badge ${map[s]||'badge-planned'}">${s}</span>`;
+}
+
+function releasePill(r, status) {
+  if (!r) return '<span class="release-pill">–</span>';
+  const d = new Date(r), now = new Date();
+  const diff = (d - now) / 86400000;
+  let cls = 'ok';
+  if (status === 'Done') cls = 'ok';
+  else if (diff < 0) cls = 'overdue';
+  else if (diff < 14) cls = 'soon';
+  const label = d.toLocaleDateString('en-IN', {day:'2-digit',month:'short',year:'2-digit'});
+  const icon = cls==='overdue'?'🔴':cls==='soon'?'🟡':'🟢';
+  return `<span class="release-pill ${cls}">${icon} ${label}</span>`;
+}
+
+function ownerAvatar(o) {
+  const colors = {'Gitanjali':'#6c63ff','Pratik':'#f97316','Tushar':'#a855f7','Divya':'#00d4aa','Vishal':'#3b82f6','Ashwini':'#ef4444','Nehal':'#f59e0b'};
+  const names = o.split(',').map(x=>x.trim()).slice(0,2);
+  return names.map(n => {
+    const init = n.substring(0,2).toUpperCase();
+    const bg = colors[n] || '#64748b';
+    return `<div class="avatar" style="background:${bg}" title="${n}">${init}</div>`;
+  }).join('');
+}
+
+function priorityDot(p) {
+  return `<span class="priority p-${p.toLowerCase()}"></span>`;
+}
+
+// ─────────────────────────────────────────────
+// FILTER
+// ─────────────────────────────────────────────
+function getFiltered() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  const sf = document.getElementById('statusFilter').value;
+  const pf = document.getElementById('priorityFilter').value;
+  return tasks.filter(t => {
+    if (q && !t.name.toLowerCase().includes(q) && !t.goal.toLowerCase().includes(q) && !t.owner.toLowerCase().includes(q)) return false;
+    if (sf && t.status !== sf) return false;
+    if (pf && t.priority !== pf) return false;
+    if (ownerFilter !== 'all' && !t.owner.toLowerCase().includes(ownerFilter.toLowerCase())) return false;
+    if (activeChip === 'retro' && !t.retro) return false;
+    if (activeChip === 'sprint' && !t.sprintFlag) return false;
+    if (activeTab === 'sprint' && t.sprint !== currentSprint) return false;
+    if (activeTab === 'retro-tasks' && !t.retro) return false;
+    if (activeTab === 'blocked' && t.status !== 'On hold' && t.status !== 'Awaiting approval') return false;
+    return true;
+  });
+}
+
+// ─────────────────────────────────────────────
+// STATS
+// ─────────────────────────────────────────────
+function renderStats() {
+  const all = tasks;
+  const inProgress = all.filter(t=>t.status==='In progress'||t.status==='POC in progress'||t.status==='Started').length;
+  const done = all.filter(t=>t.status==='Done').length;
+  const blocked = all.filter(t=>t.status==='On hold'||t.status==='Awaiting approval').length;
+  const totalPts = all.filter(t=>t.sprint===currentSprint).reduce((a,b)=>a+(+b.points||0),0);
+  const retroCount = all.filter(t=>t.retro).length;
+  document.getElementById('statsRow').innerHTML = `
+    <div class="stat-card accent"><div class="stat-num">${all.length}</div><div class="stat-label">Total Tasks</div></div>
+    <div class="stat-card blue"><div class="stat-num">${inProgress}</div><div class="stat-label">In Progress</div></div>
+    <div class="stat-card green"><div class="stat-num">${done}</div><div class="stat-label">Done</div></div>
+    <div class="stat-card red"><div class="stat-num">${blocked}</div><div class="stat-label">Blocked / Hold</div></div>
+    <div class="stat-card yellow"><div class="stat-num">${totalPts}</div><div class="stat-label">Sprint Points</div></div>
+  `;
+}
+
+// ─────────────────────────────────────────────
+// LIST VIEW
+// ─────────────────────────────────────────────
+function renderList() {
+  const filtered = getFiltered();
+  const sections = [...new Set(filtered.map(t=>t.section))];
+  let html = '';
+  if (!sections.length) { html = '<div class="empty-state">No tasks match your filters.</div>'; }
+  sections.forEach(sec => {
+    const meta = SECTION_META[sec] || { color:'#64748b', label:sec, owner:'' };
+    const secTasks = filtered.filter(t=>t.section===sec);
+    const pts = secTasks.reduce((a,b)=>a+(+b.points||0),0);
+    html += `
+      <div class="section-header" id="sec-${sec}">
+        <div class="section-title">
+          <span style="color:${meta.color}">●</span> ${meta.label}
+          <span class="section-count">${secTasks.length} tasks · ${pts} pts</span>
+        </div>
+        <span style="font-size:12px;color:var(--muted)">Owner: ${meta.owner}</span>
+      </div>
+      <div class="section-strip" style="background:${meta.color};opacity:0.4"></div>
+      <table class="task-table">
+        <thead>
+          <tr>
+            <th style="width:26px"></th>
+            <th>Task</th>
+            <th>Status</th>
+            <th>Owner</th>
+            <th>Points</th>
+            <th>Release</th>
+            <th>Sprint</th>
+            <th>Retro</th>
+            <th>Priority</th>
+            <th style="width:80px"></th>
+          </tr>
+        </thead>
+        <tbody>
+          ${secTasks.map(t=>taskRow(t)).join('')}
+        </tbody>
+      </table>`;
+  });
+  document.getElementById('view-list').innerHTML = html;
+}
+
+function taskRow(t) {
+  const retroChecked = t.retro ? 'checked' : '';
+  const sprintChecked = t.sprintFlag ? 'checked' : '';
+  return `
+    <tr id="row-${t.id}">
+      <td>${priorityDot(t.priority)}</td>
+      <td>
+        <div style="font-weight:600;font-size:13px">${t.name}</div>
+        ${t.notes ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">⚠ ${t.notes}</div>` : ''}
+      </td>
+      <td>${statusBadge(t.status)}</td>
+      <td><div style="display:flex;gap:3px;align-items:center">${ownerAvatar(t.owner)}<span style="font-size:11px;color:var(--muted);margin-left:4px">${t.owner.split(',')[0].trim()}</span></div></td>
+      <td><span class="points-badge" onclick="editPoints('${t.id}', this)">${t.points || '–'}</span></td>
+      <td>${releasePill(t.release, t.status)}</td>
+      <td><span style="font-size:11px;color:var(--muted)">${t.sprint||'–'}</span></td>
+      <td>
+        <label class="toggle" title="Include in Retro">
+          <input type="checkbox" ${retroChecked} onchange="toggleRetro('${t.id}', this.checked)">
+          <span class="toggle-slider"></span>
+        </label>
+      </td>
+      <td>${priorityDot(t.priority)} <span style="font-size:11px;color:var(--muted)">${t.priority}</span></td>
+      <td>
+        <div class="row-actions">
+          <button class="icon-btn" onclick="openEditModal('${t.id}')" title="Edit">✏</button>
+          <button class="icon-btn" onclick="markDone('${t.id}')" title="Mark Done">✓</button>
+          <button class="icon-btn del" onclick="deleteTask('${t.id}')" title="Delete">✕</button>
+        </div>
+      </td>
+    </tr>`;
+}
+
+// ─────────────────────────────────────────────
+// BOARD VIEW
+// ─────────────────────────────────────────────
+function renderBoard() {
+  const filtered = getFiltered();
+  const statuses = ['Planned','In progress','POC in progress','Awaiting approval','Started','Done','On hold'];
+  const colors = { 'Planned':'#a855f7','In progress':'#3b82f6','POC in progress':'#f97316','Awaiting approval':'#f59e0b','Started':'#00d4aa','Done':'#22c55e','On hold':'#ef4444' };
+  let html = '';
+  statuses.forEach(s => {
+    const col = filtered.filter(t=>t.status===s);
+    if (!col.length && s === 'Done') return;
+    const pts = col.reduce((a,b)=>a+(+b.points||0),0);
+    html += `
+      <div class="kanban-col">
+        <div class="kanban-col-header">
+          <span style="color:${colors[s]||'#64748b'}">${s}</span>
+          <span style="font-size:10px;color:var(--muted)">${col.length} · ${pts}pts</span>
+        </div>
+        ${col.map(t=>`
+          <div class="kanban-card" onclick="openEditModal('${t.id}')">
+            <div class="kanban-card-title">${t.name}</div>
+            <div class="kanban-card-meta">
+              <div style="display:flex;gap:3px">${ownerAvatar(t.owner)}</div>
+              <span class="card-pts">${t.points||'?'}pts</span>
+            </div>
+            ${t.retro ? '<div style="font-size:10px;color:var(--accent2);margin-top:4px">🔄 Retro</div>' : ''}
+          </div>`).join('')}
+      </div>`;
+  });
+  document.getElementById('kanbanBoard').innerHTML = html;
+}
+
+// ─────────────────────────────────────────────
+// RETRO VIEW
+// ─────────────────────────────────────────────
+function renderRetro() {
+  document.getElementById('retroSprintLabel').textContent = currentSprint;
+  ['well','improve','action'].forEach(k => {
+    const el = document.getElementById(`retro-${k}`);
+    el.innerHTML = (retro[k]||[]).map((item,i)=>`
+      <div class="retro-item">${item}
+        <button class="retro-del" onclick="removeRetroItem('${k}',${i})">✕</button>
+      </div>`).join('');
+  });
+  // Retro tasks
+  const retroTasks = tasks.filter(t=>t.retro);
+  const el = document.getElementById('retro-tasks-list');
+  if (!retroTasks.length) { el.innerHTML='<div class="empty-state">No tasks flagged for retro.</div>'; return; }
+  el.innerHTML = `<table class="task-table">
+    <thead><tr><th>Task</th><th>Status</th><th>Owner</th><th>Points</th><th>Notes</th></tr></thead>
+    <tbody>${retroTasks.map(t=>`
+      <tr>
+        <td><b>${t.name}</b></td>
+        <td>${statusBadge(t.status)}</td>
+        <td>${ownerAvatar(t.owner)}</td>
+        <td><span class="points-badge">${t.points||'–'}</span></td>
+        <td style="font-size:12px;color:var(--muted)">${t.notes||'–'}</td>
+      </tr>`).join('')}
+    </tbody></table>`;
+  renderVelocity();
+}
+
+function renderVelocity() {
+  const sprints = ['Apr Sprint 1','Apr Sprint 2','May Sprint 1','May Sprint 2','Jun Sprint 1','Jun Sprint 2'];
+  const max = Math.max(...sprints.map(s => tasks.filter(t=>t.sprint===s&&t.status==='Done').reduce((a,b)=>a+(+b.points||0),0)), 1);
+  const colors = ['#6c63ff','#00d4aa','#3b82f6','#f97316','#a855f7','#22c55e'];
+  const html = sprints.map((s,i) => {
+    const pts = tasks.filter(t=>t.sprint===s&&t.status==='Done').reduce((a,b)=>a+(+b.points||0),0);
+    const h = Math.max(4, Math.round((pts/max)*72));
+    return `<div class="bar-wrap">
+      <div style="font-size:10px;color:var(--muted);margin-bottom:2px">${pts}pts</div>
+      <div class="bar" style="height:${h}px;background:${colors[i]};"></div>
+      <div class="bar-label">${s.replace(' Sprint ',' S')}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('velocityChart').innerHTML = html;
+}
+
+// ─────────────────────────────────────────────
+// RENDER ALL
+// ─────────────────────────────────────────────
+function renderAll() {
+  renderStats();
+  if (activeView === 'list') renderList();
+  else if (activeView === 'board') renderBoard();
+  else renderRetro();
+}
+
+// ─────────────────────────────────────────────
+// ACTIONS
+// ─────────────────────────────────────────────
+function toggleRetro(id, val) {
+  const t = tasks.find(t=>t.id===id);
+  if (t) { t.retro = val; save(); renderStats(); toast(val ? '🔄 Added to retro' : 'Removed from retro', 'success'); }
+}
+
+function markDone(id) {
+  const t = tasks.find(t=>t.id===id);
+  if (t) { t.status = 'Done'; save(); renderAll(); toast('✅ Marked as Done', 'success'); }
+}
+
+function deleteTask(id) {
+  if (!confirm('Delete this task?')) return;
+  tasks = tasks.filter(t=>t.id!==id);
+  save(); renderAll(); toast('🗑 Task deleted', 'error');
+}
+
+function editPoints(id, el) {
+  const t = tasks.find(t=>t.id===id);
+  if (!t) return;
+  const input = document.createElement('input');
+  input.type = 'number'; input.className = 'points-input';
+  input.value = t.points || 1; input.min=1; input.max=21;
+  input.onblur = () => { t.points = +input.value || 1; save(); renderAll(); };
+  input.onkeydown = e => { if(e.key==='Enter') input.blur(); };
+  el.replaceWith(input); input.focus();
+}
+
+function filterOwner(o) {
+  ownerFilter = o;
+  document.querySelectorAll('.sidebar-item').forEach(el => {
+    if (el.onclick && el.onclick.toString().includes(o)) el.classList.add('active');
+    else if (el.onclick && el.onclick.toString().includes('filterOwner')) el.classList.remove('active');
+  });
+  renderAll();
+}
+
+function filterChip(c) {
+  activeChip = c;
+  document.querySelectorAll('.filter-chip').forEach(el => el.classList.remove('active'));
+  document.getElementById('chip-'+c).classList.add('active');
+  renderAll();
+}
+
+function switchTab(t, el) {
+  activeTab = t;
+  document.querySelectorAll('.tab').forEach(e=>e.classList.remove('active'));
+  el.classList.add('active');
+  renderAll();
+}
+
+function switchView(v, el) {
+  activeView = v;
+  document.querySelectorAll('.sidebar-item').forEach(e=>e.classList.remove('active'));
+  el.classList.add('active');
+  ['list','board','retro'].forEach(n => {
+    const el2 = document.getElementById('view-'+n);
+    if (el2) el2.className = el2.className.replace(' active','');
+  });
+  const target = document.getElementById('view-'+(v==='retro'?'retro':'list'));
+  const board = document.getElementById('view-board');
+  const list = document.getElementById('view-list');
+  if (v==='list') { list.classList.add('active'); }
+  else if (v==='board') { board.classList.add('active'); }
+  else { document.getElementById('view-retro').classList.add('active'); }
+  renderAll();
+}
+
+function changeSprint() {
+  currentSprint = document.getElementById('sprintSelect').value;
+  document.getElementById('sprintBadge').textContent = currentSprint;
+  localStorage.setItem('tb_sprint', currentSprint);
+  renderAll();
+}
+
+function scrollToSection(sec) {
+  const el = document.getElementById('sec-'+sec);
+  if (el) el.scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+// ─────────────────────────────────────────────
+// MODAL
+// ─────────────────────────────────────────────
+function openAddModal() {
+  editingId = null;
+  document.getElementById('modalTitle').textContent = 'Add New Task';
+  document.getElementById('f-name').value = '';
+  document.getElementById('f-goal').value = '';
+  document.getElementById('f-section').value = 'AI-Powered';
+  document.getElementById('f-status').value = 'Planned';
+  document.getElementById('f-owner').value = '';
+  document.getElementById('f-priority').value = 'Medium';
+  document.getElementById('f-points').value = 3;
+  document.getElementById('f-release').value = '';
+  document.getElementById('f-sprint').value = currentSprint;
+  document.getElementById('f-notes').value = '';
+  document.getElementById('f-retro').checked = false;
+  document.getElementById('f-sprint-flag').checked = true;
+  document.getElementById('taskModal').classList.remove('hidden');
+}
+
+function openEditModal(id) {
+  const t = tasks.find(t=>t.id===id);
+  if (!t) return;
+  editingId = id;
+  document.getElementById('modalTitle').textContent = 'Edit Task';
+  document.getElementById('f-name').value = t.name;
+  document.getElementById('f-goal').value = t.goal;
+  document.getElementById('f-section').value = t.section;
+  document.getElementById('f-status').value = t.status;
+  document.getElementById('f-owner').value = t.owner;
+  document.getElementById('f-priority').value = t.priority;
+  document.getElementById('f-points').value = t.points;
+  document.getElementById('f-release').value = t.release || '';
+  document.getElementById('f-sprint').value = t.sprint || currentSprint;
+  document.getElementById('f-notes').value = t.notes;
+  document.getElementById('f-retro').checked = t.retro;
+  document.getElementById('f-sprint-flag').checked = t.sprintFlag;
+  document.getElementById('taskModal').classList.remove('hidden');
+}
+
+function closeModal() { document.getElementById('taskModal').classList.add('hidden'); }
+
+function saveTask() {
+  const name = document.getElementById('f-name').value.trim();
+  if (!name) { toast('Task name is required', 'error'); return; }
+  const data = {
+    name, goal: document.getElementById('f-goal').value.trim(),
+    section: document.getElementById('f-section').value,
+    status: document.getElementById('f-status').value,
+    owner: document.getElementById('f-owner').value.trim() || 'Unassigned',
+    priority: document.getElementById('f-priority').value,
+    points: +document.getElementById('f-points').value || 1,
+    release: document.getElementById('f-release').value,
+    sprint: document.getElementById('f-sprint').value,
+    notes: document.getElementById('f-notes').value.trim(),
+    retro: document.getElementById('f-retro').checked,
+    sprintFlag: document.getElementById('f-sprint-flag').checked,
+  };
+  if (editingId) {
+    const idx = tasks.findIndex(t=>t.id===editingId);
+    tasks[idx] = { ...tasks[idx], ...data };
+    toast('✏ Task updated', 'success');
+  } else {
+    tasks.push({ id: uid(), ...data });
+    toast('✅ Task added', 'success');
+  }
+  save(); closeModal(); renderAll();
+}
+
+// ─────────────────────────────────────────────
+// RETRO ITEMS
+// ─────────────────────────────────────────────
+function addRetroItem(col) {
+  const text = prompt(`Add to "${col === 'well' ? 'Went Well' : col === 'improve' ? 'Needs Improvement' : 'Action Items'}":`);
+  if (!text) return;
+  retro[col].push(text.trim());
+  saveRetro(); renderRetro();
+}
+
+function removeRetroItem(col, idx) {
+  retro[col].splice(idx, 1);
+  saveRetro(); renderRetro();
+}
+
+// ─────────────────────────────────────────────
+// EXPORT CSV
+// ─────────────────────────────────────────────
+function exportCSV() {
+  const cols = ['name','section','status','owner','priority','points','release','sprint','notes','retro'];
+  const rows = [cols.join(','), ...getFiltered().map(t=>cols.map(c=>`"${(t[c]||'').toString().replace(/"/g,'""')}"`).join(','))];
+  const blob = new Blob([rows.join('\n')], { type:'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `sprint-tasks-${currentSprint.replace(/ /g,'-')}.csv`;
+  a.click();
+  toast('⬇ CSV exported', 'success');
+}
+
+// ─────────────────────────────────────────────
+// TOAST
+// ─────────────────────────────────────────────
+function toast(msg, type='success') {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  document.getElementById('toastContainer').appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+// Close modal on overlay click
+document.getElementById('taskModal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+// ─────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────
+load();
+renderAll();
+</script>
+</body>
+</html>
