@@ -261,6 +261,17 @@
 
   /* SPRINT chip trail arrow */
   .trail-arrow { color: var(--muted); font-size: 9px; }
+
+  /* PLANNING TRAIL */
+  .plan-trail { margin-top: 5px; display: flex; flex-direction: column; gap: 3px; }
+  .plan-row { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); flex-wrap: wrap; }
+  .plan-row strong { color: var(--text); }
+  .slip-badge { background: #fee2e2; border: 1px solid #fca5a5; color: var(--red); padding: 1px 6px; border-radius: 10px; font-size: 10px; font-weight: 700; white-space: nowrap; }
+  .ontime-badge { background: #dcfce7; border: 1px solid #86efac; color: var(--green); padding: 1px 6px; border-radius: 10px; font-size: 10px; font-weight: 700; white-space: nowrap; }
+  .assign-trail { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 3px; font-size: 11px; color: var(--muted); }
+  .assign-chip { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 1px 7px; font-size: 10px; color: var(--muted); }
+  .doc-link { font-size: 11px; color: var(--accent); text-decoration: none; }
+  .doc-link:hover { text-decoration: underline; }
 </style>
 </head>
 <body>
@@ -509,6 +520,42 @@
         <label>Notes / Risks</label>
         <input type="text" id="f-notes" placeholder="Any blockers or risks?">
       </div>
+
+      <!-- DIVIDER -->
+      <div class="form-group full" style="border-top:1px solid var(--border);margin:4px 0;padding-top:14px">
+        <div style="font-size:12px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px">📋 Assignment & Planning Trail</div>
+        <div style="font-size:11px;color:var(--muted)">Track who assigned it, when it was planned, and if it slipped</div>
+      </div>
+
+      <div class="form-group">
+        <label>Assigned By</label>
+        <input type="text" id="f-assignedBy" placeholder="e.g. Pratik, Manager">
+      </div>
+      <div class="form-group">
+        <label>Assigned On</label>
+        <input type="date" id="f-assignedOn">
+      </div>
+      <div class="form-group">
+        <label>Doc / PRD Shared On</label>
+        <input type="date" id="f-docShared">
+      </div>
+      <div class="form-group">
+        <label>Doc / PRD Link</label>
+        <input type="text" id="f-docLink" placeholder="https://... or doc name">
+      </div>
+      <div class="form-group">
+        <label>Originally Planned For</label>
+        <input type="date" id="f-plannedDate" title="The date this was first scheduled">
+      </div>
+      <div class="form-group">
+        <label>Revised / Actual Date</label>
+        <input type="date" id="f-revisedDate" title="If it got postponed, what's the new date?">
+      </div>
+      <div class="form-group full">
+        <label>Reason for Postponement</label>
+        <input type="text" id="f-postponeReason" placeholder="e.g. Waiting for design sign-off, dependency on parser">
+      </div>
+
       <div class="form-group full">
         <div class="checkbox-row">
           <input type="checkbox" id="f-retro">
@@ -847,14 +894,44 @@ function spilloverTrail(t) {
           <div class="spillover-trail">${trail}</div>`;
 }
 
+function planningTrail(t) {
+  let html = '';
+  // Slip indicator
+  if (t.plannedDate) {
+    const planned = new Date(t.plannedDate);
+    const revised = t.revisedDate ? new Date(t.revisedDate) : null;
+    const fmt = d => d.toLocaleDateString('en-IN', {day:'2-digit', month:'short'});
+    if (revised && revised > planned) {
+      const days = Math.round((revised - planned) / 86400000);
+      html += `<div class="plan-row">📅 Planned: <strong>${fmt(planned)}</strong> → Moved to: <strong>${fmt(revised)}</strong> <span class="slip-badge">⏱ +${days}d slip</span>${t.postponeReason ? ` <span style="font-size:10px;color:var(--muted)">— ${t.postponeReason}</span>` : ''}</div>`;
+    } else if (revised) {
+      html += `<div class="plan-row">📅 Planned: <strong>${fmt(planned)}</strong> → Delivered: <strong>${fmt(revised)}</strong> <span class="ontime-badge">✓ On time</span></div>`;
+    } else {
+      html += `<div class="plan-row">📅 Planned for: <strong>${fmt(planned)}</strong></div>`;
+    }
+  }
+  // Assignment trail
+  const chips = [];
+  if (t.assignedBy) chips.push(`👤 Assigned by <strong style="color:var(--text)">${t.assignedBy}</strong>`);
+  if (t.assignedOn) chips.push(`on ${new Date(t.assignedOn).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'2-digit'})}`);
+  if (t.docShared) chips.push(`📄 Doc shared: ${new Date(t.docShared).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'2-digit'})}`);
+  if (t.docLink) chips.push(`<a class="doc-link" href="${t.docLink.startsWith('http')?t.docLink:'#'}" target="_blank">🔗 ${t.docLink.length>30?t.docLink.substring(0,30)+'…':t.docLink}</a>`);
+  if (chips.length) html += `<div class="assign-trail">${chips.join('<span style="color:var(--border);margin:0 2px">·</span>')}</div>`;
+  return html ? `<div class="plan-trail">${html}</div>` : '';
+}
+
 function taskRow(t) {
   const retroChecked = t.retro ? 'checked' : '';
+  const isSlipped = t.plannedDate && t.revisedDate && new Date(t.revisedDate) > new Date(t.plannedDate);
+  const isSpillover = (t.sprintHistory||[]).length > 0 && t.status !== 'Done';
+  const rowBg = isSpillover ? 'background:#fffbeb' : isSlipped ? 'background:#fff8f8' : '';
   return `
-    <tr id="row-${t.id}" ${(t.sprintHistory||[]).length > 0 && t.status!=='Done' ? 'style="background:#fffbeb"' : ''}>
+    <tr id="row-${t.id}" ${rowBg ? `style="${rowBg}"` : ''}>
       <td>${priorityDot(t.priority)}</td>
       <td>
         <div style="font-weight:600;font-size:13px">${t.name}</div>
         ${spilloverTrail(t)}
+        ${planningTrail(t)}
         ${t.notes ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">⚠ ${t.notes}</div>` : ''}
       </td>
       <td>${statusBadge(t.status)}</td>
@@ -1065,6 +1142,11 @@ function scrollToSection(sec) {
 // ─────────────────────────────────────────────
 // MODAL
 // ─────────────────────────────────────────────
+function clearPlanFields() {
+  ['f-assignedBy','f-assignedOn','f-docShared','f-docLink','f-plannedDate','f-revisedDate','f-postponeReason']
+    .forEach(id => { document.getElementById(id).value = ''; });
+}
+
 function openAddModal() {
   editingId = null;
   document.getElementById('modalTitle').textContent = 'Add New Task';
@@ -1080,6 +1162,7 @@ function openAddModal() {
   document.getElementById('f-notes').value = '';
   document.getElementById('f-retro').checked = false;
   document.getElementById('f-sprint-flag').checked = true;
+  clearPlanFields();
   document.getElementById('taskModal').classList.remove('hidden');
 }
 
@@ -1100,6 +1183,13 @@ function openEditModal(id) {
   document.getElementById('f-notes').value = t.notes;
   document.getElementById('f-retro').checked = t.retro;
   document.getElementById('f-sprint-flag').checked = t.sprintFlag;
+  document.getElementById('f-assignedBy').value = t.assignedBy || '';
+  document.getElementById('f-assignedOn').value = t.assignedOn || '';
+  document.getElementById('f-docShared').value = t.docShared || '';
+  document.getElementById('f-docLink').value = t.docLink || '';
+  document.getElementById('f-plannedDate').value = t.plannedDate || '';
+  document.getElementById('f-revisedDate').value = t.revisedDate || '';
+  document.getElementById('f-postponeReason').value = t.postponeReason || '';
   document.getElementById('taskModal').classList.remove('hidden');
 }
 
@@ -1121,6 +1211,13 @@ function saveTask() {
     notes: document.getElementById('f-notes').value.trim(),
     retro: document.getElementById('f-retro').checked,
     sprintFlag: document.getElementById('f-sprint-flag').checked,
+    assignedBy: document.getElementById('f-assignedBy').value.trim(),
+    assignedOn: document.getElementById('f-assignedOn').value,
+    docShared: document.getElementById('f-docShared').value,
+    docLink: document.getElementById('f-docLink').value.trim(),
+    plannedDate: document.getElementById('f-plannedDate').value,
+    revisedDate: document.getElementById('f-revisedDate').value,
+    postponeReason: document.getElementById('f-postponeReason').value.trim(),
   };
   if (editingId) {
     const idx = tasks.findIndex(t=>t.id===editingId);
