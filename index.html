@@ -84,11 +84,42 @@
   .section-title { font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
   .section-count { background: var(--surface2); padding: 2px 8px; border-radius: 20px; font-size: 11px; color: var(--muted); }
 
-  /* TASK TABLE */
-  .task-table { width: 100%; border-collapse: collapse; background: var(--surface); border-radius: 12px; overflow: hidden; border: 1px solid var(--border); margin-bottom: 8px; }
-  .task-table th { background: var(--surface2); padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
-  .task-table td { padding: 11px 14px; font-size: 13px; border-top: 1px solid var(--border); vertical-align: middle; }
-  .task-table tr:hover td { background: rgba(108,99,255,0.04); }
+  /* TASK CARDS */
+  .task-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
+  .task-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; border-left: 4px solid var(--border); transition: box-shadow 0.15s, border-color 0.15s; position: relative; }
+  .task-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.07); }
+  .task-card.p-high { border-left-color: var(--red); }
+  .task-card.p-medium { border-left-color: var(--yellow); }
+  .task-card.p-low { border-left-color: var(--green); }
+  .task-card.slipped { background: #fff8f8; }
+  .task-card.spillover { background: #fffbeb; }
+
+  /* CARD TOP ROW */
+  .card-top { display: flex; align-items: flex-start; gap: 10px; }
+  .card-title-wrap { flex: 1; min-width: 0; }
+  .card-title { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 3px; line-height: 1.4; }
+  .card-goal { font-size: 12px; color: var(--muted); line-height: 1.4; margin-bottom: 6px; }
+  .card-meta-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+
+  /* CARD ACTIONS — always visible */
+  .card-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+  .card-btn { display: inline-flex; align-items: center; gap: 4px; padding: 5px 10px; border-radius: 7px; border: 1px solid var(--border); background: var(--surface2); color: var(--muted); cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.15s; white-space: nowrap; }
+  .card-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(108,99,255,0.06); }
+  .card-btn.done-btn:hover { border-color: var(--green); color: var(--green); background: #f0fdf4; }
+  .card-btn.del-btn:hover { border-color: var(--red); color: var(--red); background: #fff5f5; }
+  .card-btn.live-btn { border-color: var(--green); color: var(--green); background: #f0fdf4; }
+
+  /* META CHIPS */
+  .meta-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--muted); background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 2px 8px; white-space: nowrap; }
+  .meta-chip.clickable { cursor: pointer; }
+  .meta-chip.clickable:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* RETRO TOGGLE in card */
+  .retro-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; border-radius: 6px; padding: 2px 8px; border: 1px solid var(--border); cursor: pointer; transition: all 0.15s; background: var(--surface2); color: var(--muted); }
+  .retro-chip.on { background: #ede9fe; border-color: var(--accent); color: var(--accent); font-weight: 600; }
+
+  /* OWNER AVATAR */
+  .owner-tag { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--muted); }
 
   /* STATUS BADGES */
   .badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; white-space: nowrap; }
@@ -121,12 +152,7 @@
   .owner-tag { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--muted); }
   .avatar { width: 22px; height: 22px; border-radius: 50%; background: var(--accent); font-size: 9px; font-weight: 700; color: #fff; display: inline-flex; align-items: center; justify-content: center; text-transform: uppercase; flex-shrink: 0; }
 
-  /* ROW ACTIONS */
-  .row-actions { display: flex; gap: 4px; opacity: 0; transition: opacity 0.15s; }
-  tr:hover .row-actions { opacity: 1; }
-  .icon-btn { width: 26px; height: 26px; border-radius: 6px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; transition: all 0.15s; }
-  .icon-btn:hover { background: var(--surface2); color: var(--text); }
-  .icon-btn.del:hover { border-color: var(--red); color: var(--red); }
+  /* OWNER AVATAR (legacy kept) */
 
   /* PRIORITY DOT */
   .priority { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; display: inline-block; }
@@ -932,34 +958,22 @@ function renderList() {
     const meta = SECTION_META[sec] || { color:'#64748b', label:sec, owner:'' };
     const secTasks = filtered.filter(t=>t.section===sec);
     const pts = secTasks.reduce((a,b)=>a+(+b.points||0),0);
+    const done = secTasks.filter(t=>t.status==='Done').length;
+    const pct = secTasks.length ? Math.round(done/secTasks.length*100) : 0;
     html += `
       <div class="section-header" id="sec-${sec}">
         <div class="section-title">
           <span style="color:${meta.color}">●</span> ${meta.label}
-          <span class="section-count">${secTasks.length} tasks · ${pts} pts</span>
+          <span class="section-count">${secTasks.length} tasks · ${pts} pts · ${pct}% done</span>
         </div>
         <span style="font-size:12px;color:var(--muted)">Owner: ${meta.owner}</span>
       </div>
-      <div class="section-strip" style="background:${meta.color};opacity:0.4"></div>
-      <table class="task-table">
-        <thead>
-          <tr>
-            <th style="width:26px"></th>
-            <th>Task</th>
-            <th>Status</th>
-            <th>Owner</th>
-            <th>Points</th>
-            <th>Release</th>
-            <th>Sprint</th>
-            <th>Retro</th>
-            <th>Priority</th>
-            <th style="width:80px"></th>
-          </tr>
-        </thead>
-        <tbody>
-          ${secTasks.map(t=>taskRow(t)).join('')}
-        </tbody>
-      </table>`;
+      <div style="height:4px;border-radius:3px;background:var(--border);margin-bottom:14px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:${meta.color};border-radius:3px;transition:width 0.4s"></div>
+      </div>
+      <div class="task-list">
+        ${secTasks.map(t=>taskCard(t)).join('')}
+      </div>`;
   });
   document.getElementById('view-list').innerHTML = html;
 }
@@ -1002,41 +1016,53 @@ function planningTrail(t) {
   return html ? `<div class="plan-trail">${html}</div>` : '';
 }
 
-function taskRow(t) {
-  const retroChecked = t.retro ? 'checked' : '';
-  const isSlipped = t.plannedDate && t.revisedDate && new Date(t.revisedDate) > new Date(t.plannedDate);
+function taskCard(t) {
+  const isSlipped   = t.plannedDate && t.revisedDate && new Date(t.revisedDate) > new Date(t.plannedDate);
   const isSpillover = (t.sprintHistory||[]).length > 0 && t.status !== 'Done';
-  const rowBg = isSpillover ? 'background:#fffbeb' : isSlipped ? 'background:#fff8f8' : '';
+  const isDone      = t.status === 'Done';
+  const cardClass   = `task-card p-${t.priority.toLowerCase()}${isSpillover?' spillover':isSlipped?' slipped':''}`;
+  const retroClass  = `retro-chip${t.retro?' on':''}`;
+
   return `
-    <tr id="row-${t.id}" ${rowBg ? `style="${rowBg}"` : ''}>
-      <td>${priorityDot(t.priority)}</td>
-      <td>
-        <div style="font-weight:600;font-size:13px">${t.name}</div>
+  <div class="${cardClass}" id="card-${t.id}">
+    <div class="card-top">
+      <div class="card-title-wrap">
+        <div class="card-title" style="${isDone?'text-decoration:line-through;opacity:0.55':''}">
+          ${t.name}
+        </div>
+        ${t.goal ? `<div class="card-goal">${t.goal.length>120?t.goal.substring(0,120)+'…':t.goal}</div>` : ''}
+
+        <!-- META ROW -->
+        <div class="card-meta-row">
+          ${statusBadge(t.status)}
+          <div class="owner-tag">${ownerAvatar(t.owner)}<span style="font-size:11px;color:var(--muted)">${t.owner.split(',')[0].trim()}</span></div>
+          <span class="meta-chip">⚡ ${t.sprint||'No sprint'}</span>
+          <span class="meta-chip clickable" onclick="editPoints('${t.id}', this)" title="Click to edit points">
+            ${t.points||'?'} pts
+          </span>
+          ${releasePill(t.release, t.status)}
+          <span class="${retroClass}" onclick="toggleRetro('${t.id}', ${!t.retro})" title="Toggle retro">
+            🔄 ${t.retro?'In Retro':'Add to Retro'}
+          </span>
+          ${t.notes ? `<span class="meta-chip" style="color:#b45309;background:#fffbeb;border-color:#f59e0b">⚠ ${t.notes}</span>` : ''}
+        </div>
+
+        <!-- TRAILS -->
         ${spilloverTrail(t)}
         ${planningTrail(t)}
-        ${t.notes ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">⚠ ${t.notes}</div>` : ''}
         ${renderPipeline(t)}
-      </td>
-      <td>${statusBadge(t.status)}</td>
-      <td><div style="display:flex;gap:3px;align-items:center">${ownerAvatar(t.owner)}<span style="font-size:11px;color:var(--muted);margin-left:4px">${t.owner.split(',')[0].trim()}</span></div></td>
-      <td><span class="points-badge" onclick="editPoints('${t.id}', this)">${t.points || '–'}</span></td>
-      <td>${releasePill(t.release, t.status)}</td>
-      <td><span style="font-size:11px;color:var(--muted)">${t.sprint||'–'}</span></td>
-      <td>
-        <label class="toggle" title="Include in Retro">
-          <input type="checkbox" ${retroChecked} onchange="toggleRetro('${t.id}', this.checked)">
-          <span class="toggle-slider"></span>
-        </label>
-      </td>
-      <td>${priorityDot(t.priority)} <span style="font-size:11px;color:var(--muted)">${t.priority}</span></td>
-      <td>
-        <div class="row-actions">
-          <button class="icon-btn" onclick="openEditModal('${t.id}')" title="Edit">✏</button>
-          <button class="icon-btn" onclick="markDone('${t.id}')" title="Mark Done">✓</button>
-          <button class="icon-btn del" onclick="deleteTask('${t.id}')" title="Delete">✕</button>
-        </div>
-      </td>
-    </tr>`;
+      </div>
+
+      <!-- ACTIONS — always visible -->
+      <div class="card-actions">
+        <button class="card-btn" onclick="openEditModal('${t.id}')">✏ Edit</button>
+        ${!isDone
+          ? `<button class="card-btn done-btn" onclick="markDone('${t.id}')">✓ Done</button>`
+          : `<button class="card-btn live-btn" disabled>✓ Done</button>`}
+        <button class="card-btn del-btn" onclick="deleteTask('${t.id}')">✕</button>
+      </div>
+    </div>
+  </div>`;
 }
 
 // ─────────────────────────────────────────────
@@ -1152,10 +1178,11 @@ function editPoints(id, el) {
   if (!t) return;
   const input = document.createElement('input');
   input.type = 'number'; input.className = 'points-input';
-  input.value = t.points || 1; input.min=1; input.max=21;
+  input.value = t.points || 1; input.min = 1; input.max = 21;
+  input.style.cssText = 'width:52px;background:var(--surface2);border:1px solid var(--accent);color:var(--text);padding:2px 6px;border-radius:6px;font-size:12px;text-align:center;';
   input.onblur = () => { t.points = +input.value || 1; save(); renderAll(); };
-  input.onkeydown = e => { if(e.key==='Enter') input.blur(); };
-  el.replaceWith(input); input.focus();
+  input.onkeydown = e => { if (e.key === 'Enter') input.blur(); if (e.key === 'Escape') { input.replaceWith(el); } };
+  el.replaceWith(input); input.focus(); input.select();
 }
 
 function filterOwner(o) {
