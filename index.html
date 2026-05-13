@@ -887,8 +887,20 @@ function changeSprint() {
 }
 
 function scrollToSection(sec) {
-  const el = document.getElementById('sec-'+sec);
-  if (el) el.scrollIntoView({ behavior:'smooth', block:'start' });
+  // Switch to list view first if not already there
+  if (activeView !== 'list') {
+    const listBtn = document.querySelector('.sidebar-item[onclick*="switchView(\'list\'"]');
+    switchView('list', listBtn || document.querySelector('.sidebar-item'));
+  }
+  // Use setTimeout to wait for renderList() to finish painting
+  setTimeout(() => {
+    const el = document.getElementById('sec-' + sec);
+    const main = document.getElementById('mainContent');
+    if (el && main) {
+      const offset = el.getBoundingClientRect().top - main.getBoundingClientRect().top + main.scrollTop - 16;
+      main.scrollTo({ top: offset, behavior: 'smooth' });
+    }
+  }, 50);
 }
 
 // ─────────────────────────────────────────────
