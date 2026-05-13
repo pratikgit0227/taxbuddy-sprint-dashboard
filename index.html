@@ -237,6 +237,30 @@
 
   input[type=number] { background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 9px 12px; border-radius: 8px; font-size: 13px; }
   input[type=number]:focus { outline: none; border-color: var(--accent); }
+
+  /* SPILLOVER */
+  .spillover-badge { display: inline-flex; align-items: center; gap: 4px; background: #fff3cd; border: 1px solid #f59e0b; color: #b45309; padding: 2px 7px; border-radius: 20px; font-size: 10px; font-weight: 700; white-space: nowrap; }
+  .spillover-trail { font-size: 10px; color: var(--muted); margin-top: 3px; display: flex; align-items: center; gap: 3px; flex-wrap: wrap; }
+  .sprint-hop { background: #f0f2f8; border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px; font-size: 10px; }
+  .sprint-hop.current { background: #ede9fe; border-color: var(--accent); color: var(--accent); font-weight: 700; }
+
+  /* EMAIL MODAL */
+  .email-preview { background: #f8faff; border: 1px solid var(--border); border-radius: 10px; padding: 18px; font-size: 13px; line-height: 1.7; white-space: pre-wrap; font-family: 'Segoe UI', sans-serif; max-height: 420px; overflow-y: auto; color: var(--text); }
+  .email-modal { width: 720px; }
+
+  /* CREATE SPRINT MODAL */
+  .sprint-modal { width: 420px; }
+
+  /* HEALTH CHECK BANNER */
+  .health-banner { background: #fffbeb; border: 1px solid #f59e0b; border-radius: 10px; padding: 12px 16px; margin-bottom: 20px; display: flex; align-items: flex-start; gap: 10px; }
+  .health-banner-icon { font-size: 18px; flex-shrink: 0; }
+  .health-banner-body { flex: 1; }
+  .health-banner-title { font-size: 13px; font-weight: 700; color: #92400e; margin-bottom: 4px; }
+  .health-banner-list { font-size: 12px; color: #78350f; display: flex; flex-direction: column; gap: 2px; }
+  .health-banner.hidden { display: none; }
+
+  /* SPRINT chip trail arrow */
+  .trail-arrow { color: var(--muted); font-size: 9px; }
 </style>
 </head>
 <body>
@@ -258,7 +282,9 @@
     <div class="sprint-badge" id="sprintBadge">Apr Sprint 1</div>
   </div>
   <div class="topbar-right">
+    <button class="btn btn-outline" onclick="openEmailModal()">✉ Email Update</button>
     <button class="btn btn-outline" onclick="exportCSV()">⬇ Export CSV</button>
+    <button class="btn btn-outline" onclick="openSprintModal()">＋ New Sprint</button>
     <button class="btn btn-primary" onclick="openAddModal()">+ Add Task</button>
   </div>
 </div>
@@ -315,6 +341,16 @@
 
   <!-- MAIN -->
   <div class="main" id="mainContent">
+
+    <!-- HEALTH BANNER -->
+    <div class="health-banner hidden" id="healthBanner">
+      <div class="health-banner-icon">⚠️</div>
+      <div class="health-banner-body">
+        <div class="health-banner-title">Product Health Check — items needing your attention</div>
+        <div class="health-banner-list" id="healthList"></div>
+      </div>
+      <button class="btn btn-outline btn-sm" onclick="document.getElementById('healthBanner').classList.add('hidden')">Dismiss</button>
+    </div>
 
     <!-- STATS -->
     <div class="stats-row" id="statsRow"></div>
@@ -493,10 +529,104 @@
   </div>
 </div>
 
+<!-- EMAIL MODAL -->
+<div class="modal-overlay hidden" id="emailModal">
+  <div class="modal email-modal">
+    <div class="modal-header">
+      <h3>✉ Generate Email Update</h3>
+      <button class="btn btn-outline btn-sm" onclick="closeEmailModal()">✕</button>
+    </div>
+    <div class="modal-body" style="grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group">
+        <label>Owner / Person</label>
+        <select class="form-select" id="email-owner" onchange="previewEmail()">
+          <option value="Pratik">Pratik — Partner Integrations</option>
+          <option value="Gitanjali">Gitanjali — AI & ChatBuddy</option>
+          <option value="Tushar">Tushar — Parser Roadmap</option>
+          <option value="all">All Owners — Full Sprint Update</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Sprint</label>
+        <select class="form-select" id="email-sprint" onchange="previewEmail()"></select>
+      </div>
+      <div class="form-group">
+        <label>Tone</label>
+        <select class="form-select" id="email-tone" onchange="previewEmail()">
+          <option value="formal">Formal</option>
+          <option value="concise">Concise / Bullet-only</option>
+          <option value="friendly">Friendly</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Include</label>
+        <select class="form-select" id="email-include" onchange="previewEmail()">
+          <option value="all">All tasks</option>
+          <option value="inprogress">In-progress only</option>
+          <option value="done">Completed only</option>
+          <option value="blocked">Blocked / On-hold only</option>
+        </select>
+      </div>
+      <div class="form-group full">
+        <label>Email Preview</label>
+        <div class="email-preview" id="emailPreview"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeEmailModal()">Cancel</button>
+      <button class="btn btn-outline" onclick="copyEmail()">📋 Copy to Clipboard</button>
+    </div>
+  </div>
+</div>
+
+<!-- CREATE SPRINT MODAL -->
+<div class="modal-overlay hidden" id="sprintModal">
+  <div class="modal sprint-modal">
+    <div class="modal-header">
+      <h3>＋ Create New Sprint</h3>
+      <button class="btn btn-outline btn-sm" onclick="closeSprintModal()">✕</button>
+    </div>
+    <div class="modal-body" style="grid-template-columns:1fr">
+      <div class="form-group full">
+        <label>Sprint Name</label>
+        <input type="text" id="ns-name" placeholder="e.g. Jul Sprint 1">
+      </div>
+      <div class="form-group full">
+        <label>Start Date</label>
+        <input type="date" id="ns-start">
+      </div>
+      <div class="form-group full">
+        <label>End Date</label>
+        <input type="date" id="ns-end">
+      </div>
+      <div class="form-group full">
+        <label>Goal / Theme</label>
+        <input type="text" id="ns-goal" placeholder="e.g. Parser stability + Partner onboarding">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeSprintModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="createSprint()">Create Sprint</button>
+    </div>
+  </div>
+</div>
+
 <!-- TOAST CONTAINER -->
 <div class="toast-container" id="toastContainer"></div>
 
 <script>
+// ─────────────────────────────────────────────
+// DEFAULT SPRINTS
+// ─────────────────────────────────────────────
+const DEFAULT_SPRINTS = [
+  { name:'Apr Sprint 1', start:'2026-04-01', end:'2026-04-14', goal:'Kick-off Q2 — AI follow-ups & CG Parser Phase 2' },
+  { name:'Apr Sprint 2', start:'2026-04-15', end:'2026-04-30', goal:'Home Loan Parser + Partner Dashboard' },
+  { name:'May Sprint 1', start:'2026-05-01', end:'2026-05-15', goal:'ChatBuddy escalation + CG Broker integration' },
+  { name:'May Sprint 2', start:'2026-05-16', end:'2026-05-31', goal:'Conversation Summary + Payout reconciliation' },
+  { name:'Jun Sprint 1', start:'2026-06-01', end:'2026-06-15', goal:'User-facing revamp + AL/FA parsers' },
+  { name:'Jun Sprint 2', start:'2026-06-16', end:'2026-06-30', goal:'Wealth AI + buffer / hardening sprint' },
+];
+
 // ─────────────────────────────────────────────
 // DATA SEED
 // ─────────────────────────────────────────────
@@ -549,7 +679,7 @@ const SECTION_META = {
 // ─────────────────────────────────────────────
 // STATE
 // ─────────────────────────────────────────────
-let tasks = [], retro = { well:[], improve:[], action:[] };
+let tasks = [], retro = { well:[], improve:[], action:[] }, sprints = [];
 let activeView = 'list', activeTab = 'all', activeChip = 'all', ownerFilter = 'all';
 let editingId = null, currentSprint = 'Apr Sprint 1';
 
@@ -558,12 +688,27 @@ function load() {
   tasks = saved ? JSON.parse(saved) : JSON.parse(JSON.stringify(SEED_TASKS));
   const savedRetro = localStorage.getItem('tb_retro');
   retro = savedRetro ? JSON.parse(savedRetro) : { well:[], improve:[], action:[] };
+  const savedSprints = localStorage.getItem('tb_sprints');
+  sprints = savedSprints ? JSON.parse(savedSprints) : JSON.parse(JSON.stringify(DEFAULT_SPRINTS));
   currentSprint = localStorage.getItem('tb_sprint') || 'Apr Sprint 1';
+  renderSprintOptions();
   document.getElementById('sprintSelect').value = currentSprint;
   document.getElementById('sprintBadge').textContent = currentSprint;
 }
 function save() { localStorage.setItem('tb_tasks', JSON.stringify(tasks)); }
 function saveRetro() { localStorage.setItem('tb_retro', JSON.stringify(retro)); }
+function saveSprints() { localStorage.setItem('tb_sprints', JSON.stringify(sprints)); }
+
+function renderSprintOptions() {
+  const selects = ['sprintSelect','f-sprint','email-sprint'];
+  selects.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const cur = el.value;
+    el.innerHTML = sprints.map(s => `<option value="${s.name}">${s.name}${s.goal ? ' — ' + s.goal.substring(0,30)+'…' : ''}</option>`).join('');
+    if (cur) el.value = cur;
+  });
+}
 
 // ─────────────────────────────────────────────
 // HELPERS
@@ -690,14 +835,26 @@ function renderList() {
   document.getElementById('view-list').innerHTML = html;
 }
 
+function spilloverTrail(t) {
+  const history = t.sprintHistory || [];
+  const isSpillover = history.length > 0 && t.status !== 'Done';
+  if (!isSpillover) return '';
+  const all = [...history, t.sprint].filter(Boolean);
+  const trail = all.map((s, i) =>
+    `<span class="sprint-hop ${i === all.length-1 ? 'current' : ''}">${s}</span>${i < all.length-1 ? '<span class="trail-arrow">→</span>' : ''}`
+  ).join('');
+  return `<span class="spillover-badge">⚠ Spillover ×${history.length}</span>
+          <div class="spillover-trail">${trail}</div>`;
+}
+
 function taskRow(t) {
   const retroChecked = t.retro ? 'checked' : '';
-  const sprintChecked = t.sprintFlag ? 'checked' : '';
   return `
-    <tr id="row-${t.id}">
+    <tr id="row-${t.id}" ${(t.sprintHistory||[]).length > 0 && t.status!=='Done' ? 'style="background:#fffbeb"' : ''}>
       <td>${priorityDot(t.priority)}</td>
       <td>
         <div style="font-weight:600;font-size:13px">${t.name}</div>
+        ${spilloverTrail(t)}
         ${t.notes ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">⚠ ${t.notes}</div>` : ''}
       </td>
       <td>${statusBadge(t.status)}</td>
@@ -805,6 +962,7 @@ function renderVelocity() {
 // ─────────────────────────────────────────────
 function renderAll() {
   renderStats();
+  runHealthCheck();
   if (activeView === 'list') renderList();
   else if (activeView === 'board') renderBoard();
   else renderRetro();
@@ -950,6 +1108,7 @@ function closeModal() { document.getElementById('taskModal').classList.add('hidd
 function saveTask() {
   const name = document.getElementById('f-name').value.trim();
   if (!name) { toast('Task name is required', 'error'); return; }
+  const newSprint = document.getElementById('f-sprint').value;
   const data = {
     name, goal: document.getElementById('f-goal').value.trim(),
     section: document.getElementById('f-section').value,
@@ -958,17 +1117,23 @@ function saveTask() {
     priority: document.getElementById('f-priority').value,
     points: +document.getElementById('f-points').value || 1,
     release: document.getElementById('f-release').value,
-    sprint: document.getElementById('f-sprint').value,
+    sprint: newSprint,
     notes: document.getElementById('f-notes').value.trim(),
     retro: document.getElementById('f-retro').checked,
     sprintFlag: document.getElementById('f-sprint-flag').checked,
   };
   if (editingId) {
     const idx = tasks.findIndex(t=>t.id===editingId);
-    tasks[idx] = { ...tasks[idx], ...data };
-    toast('✏ Task updated', 'success');
+    const existing = tasks[idx];
+    // Track spillover: if sprint changed and task not done, record old sprint in history
+    const history = existing.sprintHistory || [];
+    if (existing.sprint && existing.sprint !== newSprint && data.status !== 'Done') {
+      if (!history.includes(existing.sprint)) history.push(existing.sprint);
+    }
+    tasks[idx] = { ...existing, ...data, sprintHistory: history };
+    toast('✏ Task updated' + (history.length ? ' — spillover tracked' : ''), 'success');
   } else {
-    tasks.push({ id: uid(), ...data });
+    tasks.push({ id: uid(), ...data, sprintHistory: [] });
     toast('✅ Task added', 'success');
   }
   save(); closeModal(); renderAll();
@@ -1014,9 +1179,178 @@ function toast(msg, type='success') {
   setTimeout(() => el.remove(), 3000);
 }
 
-// Close modal on overlay click
+// ─────────────────────────────────────────────
+// HEALTH CHECK
+// ─────────────────────────────────────────────
+function runHealthCheck() {
+  const issues = [];
+  const sprintTasks = tasks.filter(t => t.sprint === currentSprint);
+  const noPoints = tasks.filter(t => !t.points || t.points < 1);
+  const noRelease = tasks.filter(t => !t.release && t.status !== 'On hold' && t.status !== 'Done');
+  const noOwner = tasks.filter(t => !t.owner || t.owner === 'Unassigned');
+  const spillovers = tasks.filter(t => (t.sprintHistory||[]).length > 0 && t.status !== 'Done');
+  const overdue = tasks.filter(t => t.release && new Date(t.release) < new Date() && t.status !== 'Done');
+
+  if (spillovers.length) issues.push(`🔴 ${spillovers.length} spillover task(s) carried across sprints — review priority`);
+  if (overdue.length) issues.push(`🔴 ${overdue.length} task(s) past release date — needs rescheduling`);
+  if (noPoints.length) issues.push(`🟡 ${noPoints.length} task(s) missing story points — add estimates`);
+  if (noRelease.length) issues.push(`🟡 ${noRelease.length} task(s) have no release date set`);
+  if (noOwner.length) issues.push(`🟡 ${noOwner.length} task(s) are unassigned — assign an owner`);
+  if (sprintTasks.length === 0) issues.push(`⚪ No tasks assigned to ${currentSprint} yet`);
+
+  const banner = document.getElementById('healthBanner');
+  const list = document.getElementById('healthList');
+  if (issues.length) {
+    list.innerHTML = issues.map(i => `<div>${i}</div>`).join('');
+    banner.classList.remove('hidden');
+  } else {
+    banner.classList.add('hidden');
+  }
+}
+
+// ─────────────────────────────────────────────
+// SPRINT MODAL
+// ─────────────────────────────────────────────
+function openSprintModal() {
+  document.getElementById('ns-name').value = '';
+  document.getElementById('ns-start').value = '';
+  document.getElementById('ns-end').value = '';
+  document.getElementById('ns-goal').value = '';
+  document.getElementById('sprintModal').classList.remove('hidden');
+}
+function closeSprintModal() { document.getElementById('sprintModal').classList.add('hidden'); }
+
+function createSprint() {
+  const name = document.getElementById('ns-name').value.trim();
+  if (!name) { toast('Sprint name is required', 'error'); return; }
+  if (sprints.find(s => s.name === name)) { toast('Sprint already exists', 'error'); return; }
+  sprints.push({
+    name,
+    start: document.getElementById('ns-start').value,
+    end: document.getElementById('ns-end').value,
+    goal: document.getElementById('ns-goal').value.trim(),
+  });
+  saveSprints();
+  renderSprintOptions();
+  currentSprint = name;
+  document.getElementById('sprintSelect').value = name;
+  document.getElementById('sprintBadge').textContent = name;
+  localStorage.setItem('tb_sprint', name);
+  closeSprintModal();
+  renderAll();
+  toast(`✅ Sprint "${name}" created`, 'success');
+}
+
+// ─────────────────────────────────────────────
+// EMAIL MODAL
+// ─────────────────────────────────────────────
+function openEmailModal() {
+  renderSprintOptions();
+  document.getElementById('email-sprint').value = currentSprint;
+  document.getElementById('emailModal').classList.remove('hidden');
+  previewEmail();
+}
+function closeEmailModal() { document.getElementById('emailModal').classList.add('hidden'); }
+
+function previewEmail() {
+  const owner = document.getElementById('email-owner').value;
+  const sprint = document.getElementById('email-sprint').value;
+  const tone = document.getElementById('email-tone').value;
+  const include = document.getElementById('email-include').value;
+  const today = new Date().toLocaleDateString('en-IN', {day:'2-digit', month:'long', year:'numeric'});
+  const sprintData = sprints.find(s => s.name === sprint) || {};
+
+  let filtered = tasks.filter(t => t.sprint === sprint || t.status === 'In progress');
+  if (owner !== 'all') filtered = filtered.filter(t => t.owner.toLowerCase().includes(owner.toLowerCase()));
+  if (include === 'inprogress') filtered = filtered.filter(t => ['In progress','POC in progress','Started'].includes(t.status));
+  if (include === 'done') filtered = filtered.filter(t => t.status === 'Done');
+  if (include === 'blocked') filtered = filtered.filter(t => ['On hold','Awaiting approval'].includes(t.status));
+
+  const ownerLabel = owner === 'all' ? 'Product Team' : owner;
+  const sectionLabel = owner === 'Pratik' ? 'Partner Integrations' : owner === 'Gitanjali' ? 'AI & ChatBuddy' : owner === 'Tushar' ? 'Parser Roadmap' : 'All Sections';
+
+  const done = filtered.filter(t => t.status === 'Done');
+  const inprog = filtered.filter(t => ['In progress','POC in progress','Started'].includes(t.status));
+  const blocked = filtered.filter(t => ['On hold','Awaiting approval'].includes(t.status));
+  const spillovers = filtered.filter(t => (t.sprintHistory||[]).length > 0 && t.status !== 'Done');
+
+  const greetings = { formal:'Dear Team,', concise:'Hi Team,', friendly:'Hey Team 👋,' };
+  const sign = { formal:'Best regards,', concise:'Thanks,', friendly:'Cheers,' };
+
+  let body = '';
+
+  if (tone === 'concise') {
+    body = `${greetings[tone]}
+
+Sprint Update — ${sprint} | ${ownerLabel} | ${today}
+${'─'.repeat(52)}
+
+✅ COMPLETED (${done.length})
+${done.length ? done.map(t=>`  • ${t.name}`).join('\n') : '  None'}
+
+🔄 IN PROGRESS (${inprog.length})
+${inprog.length ? inprog.map(t=>`  • ${t.name} [${t.status}] — ${t.points}pts`).join('\n') : '  None'}
+
+🚧 BLOCKED / ON HOLD (${blocked.length})
+${blocked.length ? blocked.map(t=>`  • ${t.name} — ${t.notes||'No notes'}`).join('\n') : '  None'}
+
+${spillovers.length ? `⚠ SPILLOVER TASKS (${spillovers.length})\n${spillovers.map(t=>`  • ${t.name} (was in: ${(t.sprintHistory||[]).join(' → ')})`).join('\n')}\n` : ''}
+${sign[tone]}
+${ownerLabel}`;
+  } else {
+    body = `${greetings[tone]}
+
+I hope this finds you well. Please find below the sprint update for ${sprint} from the ${sectionLabel} track as of ${today}.
+${sprintData.goal ? `\nSprint Goal: "${sprintData.goal}"` : ''}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅  COMPLETED THIS SPRINT (${done.length} tasks)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${done.length ? done.map(t => `  • ${t.name}\n    Owner: ${t.owner} | ${t.points} pts`).join('\n') : '  No tasks completed yet.'}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔄  IN PROGRESS (${inprog.length} tasks)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${inprog.length ? inprog.map(t => `  • ${t.name}\n    Status: ${t.status} | Owner: ${t.owner} | ${t.points} pts${t.release ? ' | Target: '+new Date(t.release).toLocaleDateString('en-IN',{day:'2-digit',month:'short'}) : ''}`).join('\n') : '  None currently in progress.'}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🚧  BLOCKED / ON HOLD (${blocked.length} tasks)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${blocked.length ? blocked.map(t => `  • ${t.name}\n    Reason: ${t.notes||'Pending decision'} | Owner: ${t.owner}`).join('\n') : '  No blockers to report.'}
+${spillovers.length ? `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚠️  SPILLOVER TASKS (${spillovers.length} tasks carried from previous sprints)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${spillovers.map(t => `  • ${t.name}\n    Sprint trail: ${[...(t.sprintHistory||[]), t.sprint].join(' → ')} | Owner: ${t.owner}`).join('\n')}
+` : ''}
+Please feel free to reach out if you have any questions or require further details.
+
+${sign[tone]}
+${ownerLabel}
+TaxBuddy Product Team`;
+  }
+
+  document.getElementById('emailPreview').textContent = body;
+}
+
+function copyEmail() {
+  const text = document.getElementById('emailPreview').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    toast('📋 Copied to clipboard!', 'success');
+  }).catch(() => {
+    toast('Copy failed — select text manually', 'error');
+  });
+}
+
+// Close modals on overlay click
 document.getElementById('taskModal').addEventListener('click', function(e) {
   if (e.target === this) closeModal();
+});
+document.getElementById('emailModal').addEventListener('click', function(e) {
+  if (e.target === this) closeEmailModal();
+});
+document.getElementById('sprintModal').addEventListener('click', function(e) {
+  if (e.target === this) closeSprintModal();
 });
 
 // ─────────────────────────────────────────────
