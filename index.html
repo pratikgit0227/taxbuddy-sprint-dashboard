@@ -244,6 +244,36 @@
   .sprint-hop { background: #f0f2f8; border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px; font-size: 10px; }
   .sprint-hop.current { background: #ede9fe; border-color: var(--accent); color: var(--accent); font-weight: 700; }
 
+  /* PARTNER PIPELINE */
+  .pipeline-wrap { margin-top: 8px; }
+  .pipeline-stages { display: flex; align-items: center; gap: 0; flex-wrap: nowrap; overflow-x: auto; padding-bottom: 2px; }
+  .pipe-stage { display: flex; flex-direction: column; align-items: center; position: relative; min-width: 72px; }
+  .pipe-stage-dot { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--border); background: var(--surface); display: flex; align-items: center; justify-content: center; font-size: 12px; z-index: 1; flex-shrink: 0; transition: all 0.2s; }
+  .pipe-stage-dot.done { background: var(--green); border-color: var(--green); color: #fff; }
+  .pipe-stage-dot.active { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: 0 0 0 3px rgba(108,99,255,0.2); }
+  .pipe-stage-dot.deferred { background: #f59e0b; border-color: #f59e0b; color: #fff; }
+  .pipe-stage-dot.live { background: var(--green); border-color: var(--green); color: #fff; box-shadow: 0 0 0 3px rgba(34,197,94,0.2); }
+  .pipe-stage-label { font-size: 9px; color: var(--muted); margin-top: 3px; text-align: center; white-space: nowrap; font-weight: 600; max-width: 68px; }
+  .pipe-stage-date { font-size: 9px; color: var(--accent); text-align: center; white-space: nowrap; }
+  .pipe-stage-date.deferred { color: #f59e0b; }
+  .pipe-connector { height: 2px; flex: 1; min-width: 14px; max-width: 32px; background: var(--border); margin-bottom: 20px; }
+  .pipe-connector.done { background: var(--green); }
+  .pipe-connector.deferred { background: #f59e0b; background: repeating-linear-gradient(90deg,#f59e0b 0,#f59e0b 4px,transparent 4px,transparent 8px); }
+  .demo-log-btn { font-size: 10px; background: none; border: 1px dashed var(--accent); color: var(--accent); border-radius: 6px; padding: 2px 8px; cursor: pointer; margin-top: 5px; }
+  .demo-log-btn:hover { background: rgba(108,99,255,0.07); }
+  .demo-log-list { margin-top: 6px; display: flex; flex-direction: column; gap: 4px; }
+  .demo-log-entry { background: var(--surface2); border-radius: 8px; padding: 7px 10px; font-size: 11px; border-left: 3px solid var(--border); }
+  .demo-log-entry.deferred { border-left-color: #f59e0b; background: #fffbeb; }
+  .demo-log-entry.done { border-left-color: var(--green); background: #f0fdf4; }
+  .demo-log-entry.live { border-left-color: var(--green); background: #dcfce7; }
+  .demo-log-entry .entry-head { font-weight: 700; color: var(--text); margin-bottom: 2px; }
+  .demo-log-entry .entry-meta { color: var(--muted); display: flex; gap: 8px; flex-wrap: wrap; }
+  .deferred-chip { background: #fff3cd; border: 1px solid #f59e0b; color: #b45309; padding: 1px 6px; border-radius: 8px; font-size: 10px; font-weight: 700; }
+  .live-chip { background: #dcfce7; border: 1px solid #86efac; color: #15803d; padding: 1px 6px; border-radius: 8px; font-size: 10px; font-weight: 700; }
+
+  /* DEMO MODAL */
+  .demo-modal { width: 520px; }
+
   /* EMAIL MODAL */
   .email-preview { background: #f8faff; border: 1px solid var(--border); border-radius: 10px; padding: 18px; font-size: 13px; line-height: 1.7; white-space: pre-wrap; font-family: 'Segoe UI', sans-serif; max-height: 420px; overflow-y: auto; color: var(--text); }
   .email-modal { width: 720px; }
@@ -626,6 +656,58 @@
   </div>
 </div>
 
+<!-- DEMO LOG MODAL -->
+<div class="modal-overlay hidden" id="demoModal">
+  <div class="modal demo-modal">
+    <div class="modal-header">
+      <h3>🎯 Log Demo Event — <span id="demoModalTaskName" style="color:var(--accent)"></span></h3>
+      <button class="btn btn-outline btn-sm" onclick="closeDemoModal()">✕</button>
+    </div>
+    <div class="modal-body" style="grid-template-columns:1fr 1fr;gap:14px">
+      <div class="form-group">
+        <label>Event Type</label>
+        <select class="form-select" id="demo-type" onchange="onDemoTypeChange()">
+          <option value="demo_scheduled">📅 Demo Scheduled</option>
+          <option value="demo_done">✅ Demo Done</option>
+          <option value="demo_deferred">⚠️ Demo Deferred</option>
+          <option value="demo2_scheduled">📅 Demo 2 Scheduled</option>
+          <option value="demo2_done">✅ Demo 2 Done</option>
+          <option value="final_dev">🔧 Final Development Started</option>
+          <option value="live">🚀 Went Live</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Date</label>
+        <input type="date" id="demo-date">
+      </div>
+      <div class="form-group full" id="demo-target-wrap">
+        <label>Target Demo Date (if scheduling)</label>
+        <input type="date" id="demo-targetDate">
+      </div>
+      <div class="form-group full" id="demo-defer-wrap" style="display:none">
+        <label>Reason for Deferral</label>
+        <input type="text" id="demo-deferReason" placeholder="e.g. Partner not available, integration incomplete">
+      </div>
+      <div class="form-group full" id="demo-newdate-wrap" style="display:none">
+        <label>New Demo Date (after deferral)</label>
+        <input type="date" id="demo-newDate">
+      </div>
+      <div class="form-group full" id="demo-feedback-wrap" style="display:none">
+        <label>Demo Feedback / Suggestions from Partner</label>
+        <textarea id="demo-feedback" placeholder="What did the partner ask for? Any changes requested?"></textarea>
+      </div>
+      <div class="form-group full">
+        <label>Notes</label>
+        <input type="text" id="demo-notes" placeholder="Any additional context">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeDemoModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveDemoEvent()">Log Event</button>
+    </div>
+  </div>
+</div>
+
 <!-- CREATE SPRINT MODAL -->
 <div class="modal-overlay hidden" id="sprintModal">
   <div class="modal sprint-modal">
@@ -933,6 +1015,7 @@ function taskRow(t) {
         ${spilloverTrail(t)}
         ${planningTrail(t)}
         ${t.notes ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">⚠ ${t.notes}</div>` : ''}
+        ${renderPipeline(t)}
       </td>
       <td>${statusBadge(t.status)}</td>
       <td><div style="display:flex;gap:3px;align-items:center">${ownerAvatar(t.owner)}<span style="font-size:11px;color:var(--muted);margin-left:4px">${t.owner.split(',')[0].trim()}</span></div></td>
@@ -1277,6 +1360,173 @@ function toast(msg, type='success') {
 }
 
 // ─────────────────────────────────────────────
+// PARTNER PIPELINE
+// ─────────────────────────────────────────────
+const PIPE_STAGES = [
+  { key:'development',    icon:'🔧', label:'In Dev' },
+  { key:'demo_scheduled', icon:'📅', label:'Demo 1\nTarget' },
+  { key:'demo_done',      icon:'✅', label:'Demo 1\nDone' },
+  { key:'demo2_scheduled',icon:'📅', label:'Demo 2\nTarget' },
+  { key:'demo2_done',     icon:'✅', label:'Demo 2\nDone' },
+  { key:'final_dev',      icon:'🔧', label:'Final Dev' },
+  { key:'live',           icon:'🚀', label:'Live' },
+];
+
+const STAGE_ORDER = ['development','demo_scheduled','demo_done','demo2_scheduled','demo2_done','final_dev','live'];
+
+function pipelineStageIndex(log) {
+  // Find the furthest non-deferred stage reached
+  const reached = new Set(log.filter(e=>e.type!=='demo_deferred').map(e=>e.type));
+  reached.add('development');
+  let max = 0;
+  STAGE_ORDER.forEach((s,i) => { if (reached.has(s)) max = i; });
+  return max;
+}
+
+function renderPipeline(t) {
+  if (t.section !== 'Partner') return '';
+  const log = t.demoLog || [];
+  const currentIdx = pipelineStageIndex(log);
+  const hasDeferred = log.some(e => e.type === 'demo_deferred');
+  const liveEntry = log.find(e => e.type === 'live');
+  const deferEntry = log.find(e => e.type === 'demo_deferred');
+
+  let stagesHtml = '';
+  PIPE_STAGES.forEach((stage, i) => {
+    const reached = i <= currentIdx;
+    const isActive = i === currentIdx;
+    const isLive = stage.key === 'live' && liveEntry;
+    const isDeferred = stage.key === 'demo_scheduled' && hasDeferred && !log.find(e=>e.type==='demo_done');
+
+    let dotClass = reached ? (isLive ? 'live' : isDeferred ? 'deferred' : 'done') : '';
+    if (isActive && !reached) dotClass = 'active';
+    if (isActive && reached && !isLive) dotClass = 'done';
+
+    // Date label under stage
+    const entry = log.find(e => e.type === stage.key);
+    const dateStr = entry ? new Date(entry.date).toLocaleDateString('en-IN',{day:'2-digit',month:'short'}) : '';
+    const dateClass = isDeferred ? 'deferred' : '';
+
+    stagesHtml += `
+      <div class="pipe-stage">
+        <div class="pipe-stage-dot ${dotClass}">${stage.icon}</div>
+        <div class="pipe-stage-label">${stage.label.replace('\n','<br>')}</div>
+        ${dateStr ? `<div class="pipe-stage-date ${dateClass}">${dateStr}</div>` : ''}
+      </div>`;
+
+    if (i < PIPE_STAGES.length - 1) {
+      const connDone = i < currentIdx;
+      const connDeferred = isDeferred && i === STAGE_ORDER.indexOf('demo_scheduled');
+      stagesHtml += `<div class="pipe-connector ${connDeferred?'deferred':connDone?'done':''}"></div>`;
+    }
+  });
+
+  // Deferred callout
+  let deferHtml = '';
+  if (deferEntry) {
+    const newD = deferEntry.newDate ? ` → New date: <strong>${new Date(deferEntry.newDate).toLocaleDateString('en-IN',{day:'2-digit',month:'short'})}</strong>` : '';
+    deferHtml = `<div style="font-size:11px;color:#b45309;background:#fffbeb;border:1px solid #f59e0b;border-radius:6px;padding:4px 8px;margin-top:4px">
+      ⚠️ <strong>Demo Deferred:</strong> ${deferEntry.deferReason||'No reason given'}${newD}
+    </div>`;
+  }
+
+  // Log entries
+  let logHtml = '';
+  if (log.length) {
+    const labels = { demo_scheduled:'Demo Scheduled', demo_done:'Demo Done', demo_deferred:'Demo Deferred',
+      demo2_scheduled:'Demo 2 Scheduled', demo2_done:'Demo 2 Done', final_dev:'Final Dev Started', live:'Went Live' };
+    logHtml = `<div class="demo-log-list">${log.map(e => `
+      <div class="demo-log-entry ${e.type==='demo_deferred'?'deferred':e.type==='live'?'live':e.type.includes('done')?'done':''}">
+        <div class="entry-head">${labels[e.type]||e.type} ${e.type==='demo_deferred'?'<span class="deferred-chip">DEFERRED</span>':''} ${e.type==='live'?'<span class="live-chip">🚀 LIVE</span>':''}</div>
+        <div class="entry-meta">
+          <span>📅 ${new Date(e.date).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'2-digit'})}</span>
+          ${e.deferReason?`<span>Reason: ${e.deferReason}</span>`:''}
+          ${e.newDate?`<span>→ Rescheduled: ${new Date(e.newDate).toLocaleDateString('en-IN',{day:'2-digit',month:'short'})}</span>`:''}
+          ${e.feedback?`<span style="color:var(--blue)">💬 ${e.feedback}</span>`:''}
+          ${e.notes?`<span>${e.notes}</span>`:''}
+        </div>
+      </div>`).join('')}</div>`;
+  }
+
+  return `<div class="pipeline-wrap">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+      <span style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px">Partner Pipeline</span>
+      <button class="demo-log-btn" onclick="openDemoModal('${t.id}')">+ Log Demo Event</button>
+    </div>
+    <div class="pipeline-stages">${stagesHtml}</div>
+    ${deferHtml}
+    ${logHtml}
+  </div>`;
+}
+
+// ─────────────────────────────────────────────
+// DEMO MODAL
+// ─────────────────────────────────────────────
+let demoTaskId = null;
+
+function openDemoModal(taskId) {
+  demoTaskId = taskId;
+  const t = tasks.find(x=>x.id===taskId);
+  document.getElementById('demoModalTaskName').textContent = t ? t.name : '';
+  document.getElementById('demo-type').value = 'demo_scheduled';
+  document.getElementById('demo-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('demo-targetDate').value = '';
+  document.getElementById('demo-deferReason').value = '';
+  document.getElementById('demo-newDate').value = '';
+  document.getElementById('demo-feedback').value = '';
+  document.getElementById('demo-notes').value = '';
+  onDemoTypeChange();
+  document.getElementById('demoModal').classList.remove('hidden');
+}
+
+function closeDemoModal() {
+  document.getElementById('demoModal').classList.add('hidden');
+  demoTaskId = null;
+}
+
+function onDemoTypeChange() {
+  const type = document.getElementById('demo-type').value;
+  const showDefer   = type === 'demo_deferred';
+  const showFeedback = type === 'demo_done' || type === 'demo2_done';
+  const showTarget  = type === 'demo_scheduled' || type === 'demo2_scheduled';
+  document.getElementById('demo-defer-wrap').style.display   = showDefer ? '' : 'none';
+  document.getElementById('demo-newdate-wrap').style.display  = showDefer ? '' : 'none';
+  document.getElementById('demo-feedback-wrap').style.display = showFeedback ? '' : 'none';
+  document.getElementById('demo-target-wrap').style.display   = showTarget ? '' : 'none';
+}
+
+function saveDemoEvent() {
+  if (!demoTaskId) return;
+  const t = tasks.find(x=>x.id===demoTaskId);
+  if (!t) return;
+  const type = document.getElementById('demo-type').value;
+  const date = document.getElementById('demo-date').value;
+  if (!date) { toast('Date is required', 'error'); return; }
+  const entry = {
+    type, date,
+    targetDate:   document.getElementById('demo-targetDate').value || null,
+    deferReason:  document.getElementById('demo-deferReason').value.trim() || null,
+    newDate:      document.getElementById('demo-newDate').value || null,
+    feedback:     document.getElementById('demo-feedback').value.trim() || null,
+    notes:        document.getElementById('demo-notes').value.trim() || null,
+    loggedAt:     new Date().toISOString(),
+  };
+  if (!t.demoLog) t.demoLog = [];
+  t.demoLog.push(entry);
+  // Auto-update task status based on event
+  if (type === 'live') t.status = 'Done';
+  else if (type === 'demo_deferred') t.status = 'On hold';
+  else if (type === 'final_dev') t.status = 'In progress';
+  else if (type === 'demo_done' || type === 'demo2_done') t.status = 'In progress';
+  save();
+  closeDemoModal();
+  renderAll();
+  const labels = { demo_scheduled:'Demo scheduled', demo_done:'Demo logged ✅', demo_deferred:'Deferral noted ⚠️',
+    demo2_scheduled:'Demo 2 scheduled', demo2_done:'Demo 2 logged ✅', final_dev:'Final dev started', live:'🚀 Went Live!' };
+  toast(labels[type] || 'Event logged', type === 'live' ? 'success' : 'success');
+}
+
+// ─────────────────────────────────────────────
 // HEALTH CHECK
 // ─────────────────────────────────────────────
 function runHealthCheck() {
@@ -1448,6 +1698,9 @@ document.getElementById('emailModal').addEventListener('click', function(e) {
 });
 document.getElementById('sprintModal').addEventListener('click', function(e) {
   if (e.target === this) closeSprintModal();
+});
+document.getElementById('demoModal').addEventListener('click', function(e) {
+  if (e.target === this) closeDemoModal();
 });
 
 // ─────────────────────────────────────────────
