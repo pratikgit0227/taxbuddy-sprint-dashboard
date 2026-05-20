@@ -381,6 +381,9 @@
     <div class="sprint-badge" id="sprintBadge">Apr Sprint 1</div>
   </div>
   <div class="topbar-right">
+    <div id="onlineUsers" style="display:flex;gap:4px;align-items:center"></div>
+    <span id="syncStatus" style="padding:3px 10px;border-radius:5px;font-size:11px;font-weight:700;background:#D1FAE5;color:#065F46">💾 Local</span>
+    <span id="userBadge" style="font-size:12px;color:rgba(255,255,255,0.7);cursor:pointer" onclick="changeUser()" title="Click to change name">👤 …</span>
     <button class="btn btn-outline" onclick="openEmailModal()">✉ Email Update</button>
     <button class="btn btn-outline" onclick="exportCSV()">⬇ Export CSV</button>
     <button class="btn btn-outline" onclick="openSprintModal()">＋ New Sprint</button>
@@ -801,6 +804,38 @@
 <!-- TOAST CONTAINER -->
 <div class="toast-container" id="toastContainer"></div>
 
+<!-- ═══════════════════════════════════════════════
+     FIREBASE SDK  (Realtime Database — compat v9)
+     ═══════════════════════════════════════════════ -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+
+<script>
+// ╔══════════════════════════════════════════════════════════╗
+// ║  STEP 1 — Paste your Firebase config here               ║
+// ║  Get it from: console.firebase.google.com               ║
+// ║  Project Settings → General → Your apps → Config        ║
+// ╚══════════════════════════════════════════════════════════╝
+const FIREBASE_CONFIG = {
+  apiKey:            "PASTE_YOUR_API_KEY",
+  authDomain:        "PASTE_YOUR_PROJECT_ID.firebaseapp.com",
+  databaseURL:       "https://PASTE_YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
+  projectId:         "PASTE_YOUR_PROJECT_ID",
+  storageBucket:     "PASTE_YOUR_PROJECT_ID.appspot.com",
+  messagingSenderId: "PASTE_YOUR_SENDER_ID",
+  appId:             "PASTE_YOUR_APP_ID"
+};
+
+// Detect if config is still placeholder
+const FB_CONFIGURED = !FIREBASE_CONFIG.apiKey.startsWith('PASTE');
+let db = null, fbReady = false;
+
+if (FB_CONFIGURED) {
+  firebase.initializeApp(FIREBASE_CONFIG);
+  db = firebase.database();
+}
+</script>
+
 <script>
 // ─────────────────────────────────────────────
 // DEFAULT SPRINTS
@@ -869,22 +904,169 @@ const SECTION_META = {
 let tasks = [], retro = { well:[], improve:[], action:[] }, sprints = [];
 let activeView = 'list', activeTab = 'all', activeChip = 'all', ownerFilter = 'all';
 let editingId = null, currentSprint = 'Apr Sprint 1';
+let currentUser = '', userId = '', suppressRemoteRender = false;
 
+// ─────────────────────────────────────────────
+// USER IDENTITY
+// ─────────────────────────────────────────────
+function initUser() {
+  let name = localStorage.getItem('tb_username');
+  if (!name) {
+    name = prompt('👋 Welcome! Enter your name so teammates can see who made changes:', '') || 'Anonymous';
+    localStorage.setItem('tb_username', name);
+  }
+  currentUser = name;
+  userId = 'u_' + name.toLowerCase().replace(/\s+/g,'_') + '_' + Math.random().toString(36).slice(2,6);
+  document.getElementById('userBadge').textContent = '👤 ' + name;
+}
+
+// ─────────────────────────────────────────────
+// SYNC STATUS
+// ─────────────────────────────────────────────
+function setSyncStatus(status) {
+  const el = document.getElementById('syncStatus');
+  if (!el) return;
+  const map = {
+    live:    { text:'🟢 Live',    color:'#D1FAE5', textColor:'#065F46' },
+    saving:  { text:'⏳ Saving…', color:'#FEF3C7', textColor:'#78350F' },
+    offline: { text:'🔴 Offline', color:'#FEE2E2', textColor:'#991B1B' },
+    local:   { text:'💾 Local',   color:'#E0E7FF', textColor:'#3730A3' },
+  };
+  const s = map[status] || map.local;
+  el.textContent = s.text;
+  el.style.background = s.color;
+  el.style.color = s.textColor;
+}
+
+// ─────────────────────────────────────────────
+// ONLINE USERS
+// ─────────────────────────────────────────────
+function trackPresence() {
+  if (!db) return;
+  const ref = db.ref('dashboard/presence/' + userId);
+  ref.set({ name: currentUser, lastSeen: Date.now() });
+  ref.onDisconnect().remove();
+
+  db.ref('dashboard/presence').on('value', snap => {
+    const data = snap.val() || {};
+    const users = Object.values(data).filter(u => Date.now() - u.lastSeen < 120000);
+    const el = document.getElementById('onlineUsers');
+    if (el) {
+      el.innerHTML = users.map(u =>
+        `<span style="background:rgba(255,255,255,0.2);padding:2px 8px;border-radius:4px;font-size:11px;color:#fff">${u.name === currentUser ? '👤 You' : '🟢 '+u.name}</span>`
+      ).join('');
+    }
+    // Refresh presence every 60s
+    setTimeout(() => ref.set({ name: currentUser, lastSeen: Date.now() }), 60000);
+  });
+}
+
+// ─────────────────────────────────────────────
+// FIREBASE LOAD + REAL-TIME LISTENERS
+// ─────────────────────────────────────────────
 function load() {
-  const saved = localStorage.getItem('tb_tasks');
-  tasks = saved ? JSON.parse(saved) : JSON.parse(JSON.stringify(SEED_TASKS));
-  const savedRetro = localStorage.getItem('tb_retro');
-  retro = savedRetro ? JSON.parse(savedRetro) : { well:[], improve:[], action:[] };
-  const savedSprints = localStorage.getItem('tb_sprints');
-  sprints = savedSprints ? JSON.parse(savedSprints) : JSON.parse(JSON.stringify(DEFAULT_SPRINTS));
-  currentSprint = localStorage.getItem('tb_sprint') || 'Apr Sprint 1';
+  initUser();
+
+  if (!FB_CONFIGURED) {
+    // ── LOCAL MODE (Firebase not yet configured) ──
+    setSyncStatus('local');
+    const saved = localStorage.getItem('tb_tasks');
+    tasks   = saved ? JSON.parse(saved) : JSON.parse(JSON.stringify(SEED_TASKS));
+    const savedRetro = localStorage.getItem('tb_retro');
+    retro   = savedRetro ? JSON.parse(savedRetro) : { well:[], improve:[], action:[] };
+    const savedSprints = localStorage.getItem('tb_sprints');
+    sprints = savedSprints ? JSON.parse(savedSprints) : JSON.parse(JSON.stringify(DEFAULT_SPRINTS));
+    currentSprint = localStorage.getItem('tb_sprint') || 'Apr Sprint 1';
+    afterLoad();
+    return;
+  }
+
+  // ── FIREBASE MODE ──
+  setSyncStatus('live');
+  const root = db.ref('dashboard');
+
+  // Monitor connection state
+  db.ref('.info/connected').on('value', snap => {
+    setSyncStatus(snap.val() ? 'live' : 'offline');
+  });
+
+  // Listen to ALL data in one call — updates UI on every remote change
+  root.on('value', snap => {
+    const data = snap.val();
+    if (!data) {
+      // First time — seed the database
+      const seed = {
+        tasks:         Object.fromEntries(SEED_TASKS.map(t => [t.id, t])),
+        retro:         { well:[], improve:[], action:[] },
+        sprints:       DEFAULT_SPRINTS,
+        currentSprint: 'Apr Sprint 1',
+        meta:          { seeded: true }
+      };
+      root.set(seed);
+      return;
+    }
+    // Convert tasks object back to array
+    tasks         = data.tasks   ? Object.values(data.tasks)  : JSON.parse(JSON.stringify(SEED_TASKS));
+    retro         = data.retro   || { well:[], improve:[], action:[] };
+    sprints       = data.sprints || JSON.parse(JSON.stringify(DEFAULT_SPRINTS));
+    currentSprint = data.currentSprint || 'Apr Sprint 1';
+
+    // Also cache locally for offline fallback
+    localStorage.setItem('tb_tasks',   JSON.stringify(tasks));
+    localStorage.setItem('tb_retro',   JSON.stringify(retro));
+    localStorage.setItem('tb_sprints', JSON.stringify(sprints));
+    localStorage.setItem('tb_sprint',  currentSprint);
+
+    afterLoad();
+    if (!suppressRemoteRender) renderAll();
+    suppressRemoteRender = false;
+
+    // Show "updated by" toast only for remote changes (not your own)
+    if (data.meta?.lastEditedBy && data.meta.lastEditedBy !== currentUser && fbReady) {
+      toast(`🔄 Updated by ${data.meta.lastEditedBy}`, 'success');
+    }
+    fbReady = true;
+  });
+
+  trackPresence();
+}
+
+function afterLoad() {
   renderSprintOptions();
   document.getElementById('sprintSelect').value = currentSprint;
   document.getElementById('sprintBadge').textContent = currentSprint;
 }
-function save() { localStorage.setItem('tb_tasks', JSON.stringify(tasks)); }
-function saveRetro() { localStorage.setItem('tb_retro', JSON.stringify(retro)); }
-function saveSprints() { localStorage.setItem('tb_sprints', JSON.stringify(sprints)); }
+
+// ─────────────────────────────────────────────
+// SAVE FUNCTIONS
+// ─────────────────────────────────────────────
+function save() {
+  // Always save locally
+  localStorage.setItem('tb_tasks', JSON.stringify(tasks));
+  if (!FB_CONFIGURED || !db) return;
+  setSyncStatus('saving');
+  suppressRemoteRender = true;
+  const tasksObj = Object.fromEntries(tasks.map(t => [t.id, t]));
+  db.ref('dashboard/tasks').set(tasksObj)
+    .then(() => { setSyncStatus('live'); })
+    .catch(e => { console.error(e); setSyncStatus('offline'); });
+  db.ref('dashboard/meta').set({ lastEditedBy: currentUser, lastEditedAt: Date.now() });
+}
+
+function saveRetro() {
+  localStorage.setItem('tb_retro', JSON.stringify(retro));
+  if (!FB_CONFIGURED || !db) return;
+  suppressRemoteRender = true;
+  db.ref('dashboard/retro').set(retro);
+  db.ref('dashboard/meta').set({ lastEditedBy: currentUser, lastEditedAt: Date.now() });
+}
+
+function saveSprints() {
+  localStorage.setItem('tb_sprints', JSON.stringify(sprints));
+  if (!FB_CONFIGURED || !db) return;
+  suppressRemoteRender = true;
+  db.ref('dashboard/sprints').set(sprints);
+}
 
 function renderSprintOptions() {
   const selects = ['sprintSelect','f-sprint','email-sprint'];
@@ -1261,6 +1443,7 @@ function changeSprint() {
   currentSprint = document.getElementById('sprintSelect').value;
   document.getElementById('sprintBadge').textContent = currentSprint;
   localStorage.setItem('tb_sprint', currentSprint);
+  if (FB_CONFIGURED && db) db.ref('dashboard/currentSprint').set(currentSprint);
   renderAll();
 }
 
@@ -1746,6 +1929,19 @@ function copyEmail() {
   }).catch(() => {
     toast('Copy failed — select text manually', 'error');
   });
+}
+
+function changeUser() {
+  const name = prompt('Change your name:', currentUser);
+  if (name && name.trim()) {
+    currentUser = name.trim();
+    localStorage.setItem('tb_username', currentUser);
+    document.getElementById('userBadge').textContent = '👤 ' + currentUser;
+    if (FB_CONFIGURED && db) {
+      db.ref('dashboard/presence/' + userId).set({ name: currentUser, lastSeen: Date.now() });
+    }
+    toast('Name updated to ' + currentUser, 'success');
+  }
 }
 
 // Close modals on overlay click
