@@ -2,8 +2,19 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
 <title>TaxBuddy Sprint Dashboard</title>
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json"/>
+<meta name="theme-color" content="#1E3A5F"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="TaxBuddy"/>
+<link rel="apple-touch-icon" href="icons/icon-192.png"/>
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png"/>
+<link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png"/>
 <style>
   :root {
     --bg:       #F0F3F8;
@@ -360,6 +371,33 @@
   .assign-chip { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 1px 7px; font-size: 10px; color: var(--muted); }
   .doc-link { font-size: 11px; color: var(--accent); text-decoration: none; }
   .doc-link:hover { text-decoration: underline; }
+
+  /* ── MOBILE / PWA ─────────────────────────────────────────── */
+  @media (max-width: 768px) {
+    .sidebar { display: none; }
+    .main { padding: 12px; }
+    .topbar { padding: 0 12px; height: 50px; }
+    .logo { font-size: 15px; }
+    .topbar-right { gap: 6px; }
+    .btn { padding: 5px 10px; font-size: 12px; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .filters-bar { flex-wrap: wrap; gap: 6px; }
+    .filters-bar input, .filters-bar select { min-width: 0; flex: 1 1 120px; font-size: 12px; }
+    .task-card { padding: 12px; }
+    .card-title { font-size: 13px; }
+    .card-actions { display: flex !important; }
+    .modal-box { width: 96vw; max-height: 92vh; overflow-y: auto; padding: 16px; }
+    .form-grid { grid-template-columns: 1fr; }
+    .retro-grid { grid-template-columns: 1fr; }
+    /* Safe area for iPhone notch */
+    body { padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
+    .topbar { padding-top: env(safe-area-inset-top); height: calc(50px + env(safe-area-inset-top)); }
+  }
+  @media (max-width: 480px) {
+    .stats-grid { grid-template-columns: 1fr 1fr; }
+    .pipeline-stages { flex-wrap: wrap; }
+    .sprint-selector { flex-wrap: wrap; }
+  }
 </style>
 </head>
 <body>
@@ -833,6 +871,15 @@ let db = null, fbReady = false;
 if (FB_CONFIGURED) {
   firebase.initializeApp(FIREBASE_CONFIG);
   db = firebase.database();
+}
+
+// ── Service Worker (PWA) ──────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(reg => console.log('SW registered', reg.scope))
+      .catch(err => console.log('SW error', err));
+  });
 }
 </script>
 

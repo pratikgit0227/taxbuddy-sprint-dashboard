@@ -1,0 +1,25 @@
+{
+  "name": "TaxBuddy Sprint Dashboard",
+  "short_name": "TaxBuddy",
+  "description": "Q2 2026 Sprint Planning Dashboard for TaxBuddy Product Team",
+  "start_url": "/taxbuddy-sprint-dashboard/",
+  "scope": "/taxbuddy-sprint-dashboard/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1E3A5F",
+  "theme_color": "#1E3A5F",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
